@@ -30,14 +30,8 @@ BOT_TOKEN = '##'
 bot = Bot(
     command_prefix=BOT_PREFIX,
     description="Create a new channel directory system in your servers.",
-    owner_id=331551368789622784)
-
-class Globals():
-    def __init__(self):
-        self.TearingDown = []
-        self.bot.univ.LoadingUpdate = {"guildID":"bool"}
-
-univ = Globals()
+    owner_id=331551368789622784
+)
 
 if not os.path.exists(f"{Dir1}\\Serialized\\data.pkl"):
     print("[Unable to save] data.pkl not found. Replace file before shutting down. Saving disabled.")

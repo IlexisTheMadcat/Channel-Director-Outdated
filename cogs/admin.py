@@ -1,21 +1,24 @@
+
 # Lib
 from os.path import exists
-from picke import dump
+from pickle import dump
 
 # Site
-from discord.ext import commands
 from discord.ext.commands.cog import Cog
+from discord.ext.commands.context import Context
+from discord.ext.commands.core import command, is_owner
 
 # Local
 from utils.classes import Bot
 
-class admin(Cog):
-    def __init__(self, bot):
+
+class Admin(Cog):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
-    @commands.command(name="logout")
-    @commands.is_owner()
-    async def blogout(self, ctx):
+    @command(name="logout")
+    @is_owner()
+    async def blogout(self, ctx: Context):
         await ctx.send("Logging out...")
         if not exists(f"{self.bot.cwd}\\Serialized\\data.pkl"):
             await ctx.send("[Unable to save] data.pkl not found. Replace file before shutting down.")
@@ -31,5 +34,6 @@ class admin(Cog):
 
         await self.bot.logout()
 
+
 def setup(bot: Bot):
-    bot.add_cog(admin)
+    bot.add_cog(Admin(bot))
