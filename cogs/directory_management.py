@@ -355,7 +355,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
             else:
                 await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.cwd}update`.")
         else:
-            await ctx.send(f"You don't have a directory yet. Use the `{self.bot.cwd}setup` command to create one.")
+            await ctx.send(f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
             return
 
      
@@ -447,9 +447,9 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                     await self.update_directory(ctx, note=f"New category; Name: {name}; Path: {directory}")
                     print(f"+ Added new category to server \"{ctx.guild.name}\".")
             else:
-                await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.cwd}update`.")
+                await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
         else:
-            await ctx.send(f"You don't have a directory yet. Use the `{BOT_PREFIX}setup` command to create one.")
+            await ctx.send(f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
 
      
     @commands.command(aliases=["del_cat"])
@@ -478,7 +478,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                         try:
                                             channel = await self.bot.fetch_channel(iv)
                                             await channel.delete()
-                                        except discord.NotFound:
+                                        except NotFound:
                                             pass
                                         
                                     elif isinstance(iv, dict):
@@ -487,7 +487,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                                 try:
                                                     channel = await self.bot.fetch_channel(xv)
                                                     await channel.delete()
-                                                except discord.NotFound:
+                                                except NotFound:
                                                     pass
                                                 
                                             elif isinstance(xv, dict):
@@ -496,7 +496,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                                         try:
                                                             channel = await self.bot.fetch_channel(yv)
                                                             await channel.delete()
-                                                        except discord.NotFound:
+                                                        except NotFound:
                                                             pass
                                                         
                                                     elif isinstance(yv, dict):
