@@ -75,7 +75,11 @@ class BackgroundTasks(Cog):
         if self.bot.univ.DisableSaving == False:
             with open(f"{self.bot.cwd}\\Serialized\\data.pkl", "wb") as f:
                 try:
-                    dump(self.bot.univ.Directories, f)
+                    data = {
+                        "Directories":self.bot.univ.Directories,
+                        "ChangelogCache":self.bot.univ.ChangelogCache
+                    }
+                    dump(data, f)
                 except Exception as e:
                     print(f"[{time} || Unable to save] Pickle dumping Error:", e)
 

@@ -87,10 +87,7 @@ async def on_ready():
             with open(f"{bot.cwd}\\Serialized\\data.pkl", "wb") as pkfp:
                 try:
                     data = {
-                        "VanityAvatars": bot.univ.VanityAvatars,
-                        "Blacklists": bot.univ.Blacklists,
-                        "Closets": bot.univ.Closets,
-                        "ServerBlacklists": bot.univ.ServerBlacklists,
+                        "Directories": bot.univ.Directories,
                         "ChangelogCache": bot.univ.ChangelogCache
                     }
 
