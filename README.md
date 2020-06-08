@@ -49,6 +49,41 @@ General -- General commands
     invite            - No Limits
 ```
 
+### Directories: Explaination
+First, you should understand how the directory works.\
+This is a directory, for example: `root//Neighborhood//Jack's House`\
+Channel names are separate and are usually appended as a new argument.\
+Rem will tell you if your path leads to a channel.\
+
+Lets say you have a directory looking like this.\
+
+```
+Root Category: 
+-- [ Channel_1 >>> ||Channel mention link||
+-- Category: [ Cat_1 ]
+---- [Channel_2 >>> ||Channel mention link||
+---- Category: [ Cat_2 ]
+------ [ Channel_3 >>> ||Channel mention link||
+```
+
+To create a channel in Cat_2, use the command:\
+`cdr:create_new_channel "root//Cat_1//Cat_2" "Name"`\
+**The path divider is denoted as `//`**\
+
+The result will then be:\
+```
+Root Category: 
+-- [ Channel_1 >>> ||Channel mention link||
+-- Category: [ Cat_1 ]
+---- [Channel_2 >>> ||Channel mention link||
+---- Category: [ Cat_2 ]
+------ [ Channel_3 >>> ||Channel mention link||
+------ [ Name >>> ||Channel mention link||
+```
+Using this method, you can also move channels, rename them, create new categories and channels, and delete entire categories. The bot does not come with a method to delete channels for the sake of convenience. To delete a channel, simply navigate to the channel and delete. The bot will automatically update the directory when a channel is deleted. You can update the directory manually by using the command cdr:update. Note, you'll have to do this if you are deleting channels too fast, this takes more time the more channels there are. The bot makes several API calls to update the directory on deleted channels.\
+
+Yes, all channels will have their link next to them as a spoiler. They're spoiler-tagged to look like buttons. Every channel created will have a link back to the directory in it's description along with the channel's name. The REAL channel's name will NOT reflect the name you have given it. It's name will be the channel's ID.\
+
 ### Directory Mangement
 #### SETUP; Aliases: "su"
 `cdr:setup`\
