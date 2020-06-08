@@ -12,6 +12,7 @@ from discord.ext.tasks import loop
 # Local
 from utils.classes import Bot
 
+
 class BackgroundTasks(Cog):
     """Background loops"""
     def __init__(self, bot):
@@ -46,7 +47,10 @@ class BackgroundTasks(Cog):
         if self.bot.univ.DisableSaving:
             activity = Activity(type=ActivityType.playing, name=f"with SAVING DISABLED")
         else:
-            activity = Activity(type=ActivityType.watching, name=f"{self.bot.command_prefix}help | {self.bot.TimeZone}: {utctime}")
+            activity = Activity(
+                type=ActivityType.watching,
+                name=f"{self.bot.command_prefix}help | {self.bot.TimeZone}: {utctime}"
+            )
         
         await self.bot.change_presence(status=status, activity=activity)
     
@@ -80,6 +84,7 @@ class BackgroundTasks(Cog):
 
             self.bot.univ.Inactive = self.bot.univ.Inactive+1
             print(f"[CDR: {time}] Saved data.")
+
 
 def setup(bot: Bot):
     bot.add_cog(BackgroundTasks)

@@ -1,4 +1,6 @@
 # https://discord.com/oauth2/authorize?client_id=698965636432265227&permissions=268479504&scope=bot
+
+
 global TimeZone
 global debug_mode
 debug_mode = input("Enter debug mode? (D=accept)\n---| ")

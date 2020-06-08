@@ -1,9 +1,11 @@
-#Lib
 
-#Site
-from discord import CategoryChannel
-from discord.ext.commands import (
-    Cog, 
+# Lib
+
+# Site
+from discord.channel import CategoryChannel
+from discord.ext.commands.context import Context
+from discord.ext.commands.cog import Cog
+from discord.ext.commands.errors import (
     BotMissingPermissions, 
     MissingPermissions, 
     CommandNotFound, 
@@ -12,11 +14,12 @@ from discord.ext.commands import (
 )
 from discord.errors import NotFound, Forbidden
 
-#Local
+# Local
 from utils.classes import Bot
 
+
 class Events(Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: Bot):
         self.bot = bot
      
     @Cog.listener()
@@ -42,7 +45,7 @@ class Events(Cog):
                     self.bot.univ.Directories.pop(channel.guild.id)
 
                     ch = channel.guild.system_channel
-                    if ch is not None:
+                    if ch:
                         await ch.send(f":anger: Awe, what a mess! Someone messed up my directory! Next time, PLEASE use the command `{self.bot.command_prefix}teardown` that I provided you to teardown the directories appropriately. Unfortunately I can't delete all the channels that have been disorganized!")
                 else:
                     pass
@@ -51,10 +54,10 @@ class Events(Cog):
                 pass
 
         if channel.guild.id in self.bot.univ.LoadingUpdate.keys():
-            if self.bot.univ.LoadingUpdate[channel.guild.id] == False:
+            if not self.bot.univ.LoadingUpdate[channel.guild.id]:
                 self.bot.univ.LoadingUpdate[channel.guild.id] = True
                 try:
-                    dchannel = await self.bot.bot.fetch_channel(self.bot.univ.Directories[channel.guild.id]["channelID"])
+                    dchannel = await self.bot.fetch_channel(self.bot.univ.Directories[channel.guild.id]["channelID"])
                 except NotFound:
                     pass
                 else:
@@ -64,19 +67,19 @@ class Events(Cog):
 
     @Cog.listener()
     async def on_ready(self):
-        print("Logged in as", self.bot.bot.user)
-        print("ID:", self.bot.bot.user.id)
+        print("Logged in as", self.bot.user)
+        print("ID:", self.bot.user.id)
         print('------')
 
     @Cog.listener()
     async def on_message(self, msg):
-        if msg.guild is None:
+        if not msg.guild:
             return
         
-        if msg.author == self.bot.bot.user:
+        if msg.author.id == self.bot.user.id:
             return
 
-        verify_command = await self.bot.bot.get_context(msg)
+        verify_command = await self.bot.get_context(msg)
         if verify_command.valid:
             self.bot.univ.Inactive = 0
             return
@@ -88,9 +91,9 @@ class Events(Cog):
                 except Forbidden:
                     pass
 
-        if self.bot.bot.user.mentioned_in(msg):
+        if self.bot.user.mentioned_in(msg):
             try:
-                if msg.author.id == self.bot.bot.owner_id:
+                if msg.author.id == self.bot.owner_id:
                     await msg.add_reaction("💕")
                 else:
                     await msg.add_reaction("👋")
@@ -99,17 +102,22 @@ class Events(Cog):
 
     # Errors
     @Cog.listener()
-    async def on_command_error(self, ctx, error):
+    async def on_command_error(self, ctx: Context, error: Exception):
         if self.bot.debug_mode != "D":
             msg = ctx.message
             if isinstance(error, BotMissingPermissions):
                 await ctx.message.delete()
-                await msg.author.send(f"This bot is missing one or more permissions listed in `{self.bot.command_prefix}permissions`.")
+                await msg.author.send(
+                    f"This bot is missing one or more permissions listed in "
+                    f"`{self.bot.command_prefix}permissions`."
+                )
                 return
 
             elif isinstance(error, NotOwner):
                 await ctx.message.delete()
-                await msg.author.send("That command is not listed in the help menu and is to be used by the owner only.")
+                await msg.author.send(
+                    "That command is not listed in the help menu and is to be used by the owner only."
+                )
                 return
             
             elif isinstance(error, MissingRequiredArgument):
@@ -125,18 +133,30 @@ class Events(Cog):
 
             elif isinstance(error, MissingPermissions):
                 await ctx.message.delete()
-                await msg.author.send(f"You require the Manage Channels and Manage Server permissions to create and teardown the directory, and to make new channels.")
+                await msg.author.send(
+                    f"You require the Manage Channels and Manage Server permissions to create and "
+                    f"teardown the directory, and to make new channels."
+                )
                 return
             
             else:
                 if ctx.command.name is not None:
-                    await ctx.author.send(f"[Error in command \"{ctx.command.name}\"] "+str(error)+f"\nIf you keep getting this error, let the developer know!\nIn the case of a `404 Not Found` error, try using the `{self.bot.command_prefix}update` command.")
+                    await ctx.author.send(
+                        f"[Error in command \"{ctx.command.name}\"] {error}\nIf you keep getting this error, "
+                        f"let the developer know!\nIn the case of a `404 Not Found` error, try using the "
+                        f"`{self.bot.command_prefix}update` command."
+                    )
                     print(f"[Error in command \"{ctx.command.name}\"]", str(error))
+
                 else:
-                    await ctx.author.send(f"[Error outside of command] "+str(error)+"\nIf you keep getting this error, let the developer know!")
+                    await ctx.author.send(
+                        f"[Error outside of command] {error}\nIf you keep getting this error, let the developer know!"
+                    )
                     print("[Error outside of command]", error)
-        else:
-            super().on_command_error(ctx, error) # TODO: If debug_mode is == "D", load original on_command_error function (print traceback to stdout). This here may be wrong.
+
+        # else:
+        #     super().on_command_error(ctx, error)  # TODO: If debug_mode is == "D", load original on_command_error function (print traceback to stdout). This here may be wrong.
+
 
 def setup(bot: Bot):
-    bot.add_cog(Events)
+    bot.add_cog(Events(bot))

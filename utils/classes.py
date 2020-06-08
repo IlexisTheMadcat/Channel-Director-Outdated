@@ -1,5 +1,6 @@
 
 # Lib
+from asyncio import sleep
 from copy import deepcopy
 from datetime import datetime
 from os import getcwd
@@ -8,8 +9,10 @@ from os.path import exists
 # Site
 from dbl.client import DBLClient
 from dbl.errors import DBLException
+from discord.errors import HTTPException, NotFound
 from discord.ext.commands.bot import Bot as DiscordBot
 from discord.ext.commands.context import Context
+from discord.user import User
 
 # Local
 from utils.tokens import Tokens
@@ -59,7 +62,7 @@ class helper_functions():
         
         while True:
             if ctx.guild.id in self.bot.univ.LoadingUpdate:
-                await asyncio.sleep(1)
+                await sleep(1)
             else:
                 break
 
@@ -132,10 +135,10 @@ class helper_functions():
     async def update_directory(self, ctx, note=""): # ctx must meet the requirements for acessing .guild and a messagable.
         try:
             dchannel = await self.bot.fetch_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])	
-        except discord.errors.NotFound:	
+        except NotFound:
             try:	
                 cat = await self.bot.fetch_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])	
-            except discord.errors.NotFound:	
+            except NotFound:
                 await ctx.send("You need to set up your directory again.")	
                 self.bot.univ.Directories.pop(ctx.guild.id)
                 return
@@ -147,7 +150,7 @@ class helper_functions():
             
         try:	
             msg = await dchannel.fetch_message(self.bot.univ.Directories[ctx.guild.id]["msgID"])	
-        except discord.errors.NotFound:	
+        except NotFound:
             msg = await dchannel.send("Completing repairs...")
             self.bot.univ.Directories[ctx.guild.id]["msgID"] = msg.id
 
@@ -161,7 +164,6 @@ You are free to move this channel, but it's best to leave on top.
 """)
                 await dchannel.send(f"Updated. `{note}`", delete_after=5)
                 return
-            
 
             else:
                 message_lines = []
@@ -173,7 +175,7 @@ You are free to move this channel, but it's best to leave on top.
                         if isinstance(iv, int):
                             try:
                                 channel = await self.bot.fetch_channel(iv)
-                            except discord.NotFound:
+                            except NotFound:
                                 self.bot.univ.Directories[ctx.guild.id]["tree"]["root"].pop(ik)
                                 return False
                             else:
@@ -185,7 +187,7 @@ You are free to move this channel, but it's best to leave on top.
                                 if isinstance(xv, int):
                                     try:
                                         channel = await self.bot.fetch_channel(xv)
-                                    except discord.NotFound:
+                                    except NotFound:
                                         self.bot.univ.Directories[ctx.guild.id]["tree"]["root"][ik].pop(xk)
                                         return False
                                     else:
@@ -197,7 +199,7 @@ You are free to move this channel, but it's best to leave on top.
                                         if isinstance(yv, int):
                                             try:
                                                 channel = await self.bot.fetch_channel(yv)
-                                            except discord.NotFound:
+                                            except NotFound:
                                                 self.bot.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk].pop(yk)
                                                 return False
                                             else:
@@ -209,7 +211,7 @@ You are free to move this channel, but it's best to leave on top.
                                                 if isinstance(zv, int):
                                                     try:
                                                         channel = await self.bot.fetch_channel(zv)
-                                                    except discord.NotFound:
+                                                    except NotFound:
                                                         self.bot.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][yk].pop(zk)
                                                         return False
                                                     else:
@@ -221,7 +223,7 @@ You are free to move this channel, but it's best to leave on top.
                                                         if isinstance(av, int):
                                                             try:
                                                                 channel = await self.bot.fetch_channel(av)
-                                                            except discord.NotFound:
+                                                            except NotFound:
                                                                 self.bot.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][yk][zk].pop(ak)
                                                                 return False
                                                             else:
@@ -252,7 +254,7 @@ You are free to move this channel, but it's best to leave on top.
                             message_full = "\n".join(message_lines)
                             try:
                                 message = await dchannel.fetch_message(self.bot.univ.Directories[ctx.guild.id]["msgID"])
-                            except discord.errors.NotFound:
+                            except NotFound:
                                 message = await dchannel.send("Completing...")
                             else:
                                 try:
@@ -260,7 +262,7 @@ You are free to move this channel, but it's best to leave on top.
                                     await dchannel.send(f"Updated. `{note}`", delete_after=10)
                                     return
 
-                                except discord.HTTPException as e:
+                                except HTTPException as e:
                                     await dchannel.send(f":exclamation: The directory message is too large to be edited. A fix will be implemented in the future.\nIf this is not the case, it is likely a network or Discord error. Please try again.\n`Error description: [{e}]`", delete_after=20)
                             return
 
