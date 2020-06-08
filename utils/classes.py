@@ -18,7 +18,6 @@ from discord.ext.commands.context import Context
 from discord.user import User
 
 # Local
-from utils.classes import Globals
 
 class Globals:
     def __init__(self):
@@ -32,7 +31,7 @@ class Globals:
             self.DisableSaving = True
             self.Directories = {"guildID":{"catagoryID":0, "channelID":0, "msgID":0, "tree":{}}}
             self.ChangelogCache = ""
-            
+
         else:
             self.DisableSaving = False
             with open(f"{self.cwd}\\Serialized\\data.pkl", "rb") as f:
