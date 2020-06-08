@@ -48,6 +48,7 @@ General -- General commands
     help              - No Limits
     invite            - No Limits
 ```
+
 ### Directory Mangement
 #### SETUP; Aliases: "su"
 `cdr:setup`\
@@ -58,28 +59,86 @@ Set up your new custom directory system.\
 **----** Do prevent these inconveniences that I should be worried about, use the `cdr:teardown` command. I'll handle everything.\
 
 #### TEARDOWN; Aliases: "td"
-`cdr:teardown`
-**------------------------------**
-Deconstruct the custom directory system added to your server, provided by me.
-**--** IMPORTANT! Use this command especially if you have a lot of channels under the category that I created.
+`cdr:teardown`\
+**------------------------------**\
+Deconstruct the custom directory system added to your server, provided by me.\
+**--** IMPORTANT! Use this command especially if you have a lot of channels under the category that I created.\
 
 ### Channel Management
-#### CREATE_CHANNEL; Aliases: "new_ch"
-`cdr:create_channel <directory> <name>`
-**------------------------------**
-Create a new channel under `directory` with the name `name`.
-**--** To delete a channel, simply nagivate to the channel using the directory (or manually), channel options, and click Delete Channel. 
-**----** The bot will automatically update the directory. If not, use this command: `cdr:update`
+#### CREATE_CHANNEL; Aliases: "new_ch"\
+`cdr:create_channel <directory> <name>`\
+**------------------------------**\
+Create a new channel under `directory` with the name `name`.\
+**--** To delete a channel, simply nagivate to the channel using the directory (or manually), channel options, and click Delete Channel.\
+**----** The bot will automatically update the directory. If not, use this command: `cdr:update`\
 
 #### CREATE_CATEGORY; Aliases: "new_cat"
-`cdr:create_category <directory> <name>`
-**------------------------------**
-Create a new category under `directory` with the name `name`.
-**--** It is recommended not to make 2 categories with the same name in the same directory! (This is not allowed by the bot anymore)
+`cdr:create_category <directory> <name>`\
+**------------------------------**\
+Create a new category under `directory` with the name `name`.\
 
 #### DELETE_CATEGORY; Aliases: "del_cat"
-`cdr:delete_category <directory> <name>`
-**------------------------------**
-Delete a category, along with all channels within it.
-**-- THIS ACTION CANNOT BE UNDONE.**
+`cdr:delete_category <directory> <name>`\
+**------------------------------**\
+Delete a category, along with all channels within it.\
+**-- THIS ACTION CANNOT BE UNDONE.**\
 
+#### RENAME_CHANNEL; Aliases: "rn_ch"
+`cdr:rename_channel <directory> <name> <rename>`\
+**------------------------------**\
+Rename the channel at the directory `directory` with name `name` to `rename`.\
+**--** You cannot rename to a channel already with the same name in the same directory.\
+
+#### MOVE_CHANNEL; Aliases: "mv_ch"
+`cdr:move_channel <directory> <name> <new_directory>`\
+**------------------------------**\
+Moves a channel or category at the directory `directory` with name `name` to the directory `new_directory`.\
+**--** You cannot move a channel or category if the destination already has a channel or category with that name.\
+
+#### IMPORT_CHANNEL; Aliases: "imp_ch"
+`cdr:import_channel <channel> <new_directory> <name>`\
+**------------------------------**\
+Imports an existing channel into the directory `new_directory` with the name `name`.\
+**--** Your channel will not be moved or changed.\
+**--** You cannot import a channel if the destination already has a channel or category with the name `name`.\
+
+#### HIDE_CHANNEL; Aliases: "hd_ch"
+`cdr:hide_channel <directory> <name>`\
+**------------------------------**\
+Hide an existing channel from the directory `directory` with the name `name`.\
+**--** Your channel will not be moved, changed, or deleted.\
+**--** To make it appear again, use the `cdr:import_channel` command to import it back in a directory.\
+
+#### SAVE_DIRECTORY; Aliases: "save"
+`cdr:save_directory`\
+**------------------------------**\
+Save your current directory setup to a file to be loaded later at any time.\
+**--** This file contains pickled data using Python.\
+**--** To load said file, use the `cdr:setup` command and attach the file to proceed.\
+**----** The process takes longer depending on how many channels are in the entire directory.\
+
+#### UPDATE
+`cdr:update`\
+**------------------------------**\
+Updates the directory channel.\
+**--** The more channels in the directory, the longer it takes to finish.\
+**----** During this time, no changes can be made to the directory.\
+
+**--** This command is automatically called when any channel in your server is deleted.\
+**----** If channels are being deleted faster than the bot can update, you may have to update it manually when you are done.\
+
+**--** The more channels that are deleted before this is called, the longer it takes to finish.\
+**----** The system works by checking if a channel exists. If not, it updates internal memory and restarts.\
+
+#### HELP
+`cdr:help [section] [subsection]`\
+**------------------------------**\
+Sends a help message.\
+**--** The `section` and `subsection` arguments:\
+**----** Typing `{BOT_PREFIX}help` will give you `section` names.\
+**----** If `section` is "commands", `subsection` help on a certain command.\
+
+#### INVITE
+`cdr:invite`\
+**------------------------------**\
+Sends an invite link to let me join a server.\
