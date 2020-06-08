@@ -977,3 +977,5 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
         else:
             await ctx.send(f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
 
+def setup(bot: Bot):
+    bot.add_cog(Commands(bot))

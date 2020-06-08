@@ -222,4 +222,4 @@ Sends an invite link to let me join a server.
 """)
 
 def setup(bot: Bot):
-    bot.add_cog(Misc_Commands)
+    bot.add_cog(Misc_Commands(bot))

@@ -1,6 +1,6 @@
 
 # Lib
-
+from traceback import print_tb
 # Site
 from discord.channel import CategoryChannel
 from discord.ext.commands.context import Context
@@ -154,9 +154,8 @@ class Events(Cog):
                     )
                     print("[Error outside of command]", error)
 
-        # else:
-        #     super().on_command_error(ctx, error)  # TODO: If debug_mode is == "D", load original on_command_error function (print traceback to stdout). This here may be wrong.
-
+        else:
+            print_tb(error)
 
 def setup(bot: Bot):
     bot.add_cog(Events(bot))

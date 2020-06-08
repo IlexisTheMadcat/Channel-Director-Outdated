@@ -87,4 +87,4 @@ class BackgroundTasks(Cog):
 
 
 def setup(bot: Bot):
-    bot.add_cog(BackgroundTasks)
+    bot.add_cog(BackgroundTasks(bot))
