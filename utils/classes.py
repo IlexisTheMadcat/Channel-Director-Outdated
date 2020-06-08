@@ -18,7 +18,7 @@ from discord.ext.commands.context import Context
 from discord.user import User
 
 # Local
-
+from utils.classes import Globals
 
 class Globals:
     def __init__(self):
@@ -31,16 +31,19 @@ class Globals:
             print("[Unable to save] data.pkl not found. Replace file before shutting down. Saving disabled.")
             self.DisableSaving = True
             self.Directories = {"guildID":{"catagoryID":0, "channelID":0, "msgID":0, "tree":{}}}
-
+            self.ChangelogCache = ""
+            
         else:
             self.DisableSaving = False
             with open(f"{self.cwd}\\Serialized\\data.pkl", "rb") as f:
                 try:
                     data = Unpickler(f).load()
                     self.Directories = data["Directories"]
+                    self.ChangelogCache = data["ChangelogCache"]
                     print("[] Loaded data.pkl.")
                 except Exception as e:
                     self.Directories = {"guildID":{"catagoryID":0, "channelID":0, "msgID":0, "tree":{}}}
+                    self.ChangelogCache = ""
                     print("[Data Reset] Unpickling Error:", e)
 
 

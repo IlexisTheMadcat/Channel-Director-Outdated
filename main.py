@@ -75,7 +75,7 @@ async def on_ready():
     # check changelog for differences since last save
     with open(f"{bot.cwd}\\changelog.txt", "r") as clfp:
         content = clfp.read()
-        if content != bot.univ.ChangelogCache:
+        if content != bot.univ.ChangelogCache: 
             for guild in bot.guilds:
                 if guild.system_channel:
                     try:
