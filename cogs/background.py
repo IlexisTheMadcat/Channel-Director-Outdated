@@ -27,29 +27,30 @@ class BackgroundTasks(Cog):
     async def status_change(self):
         utchour = str(datetime.now().hour)
         utcminute = str(datetime.now().minute)
+
         if len(utchour) == 1:
             utchour = "0" + utchour
         if len(utcminute) == 1:
             utcminute = "0" + utcminute
         utctime = f"{utchour}:{utcminute}"
-        
+
         if self.bot.univ.Inactive >= 5:
             status = Status.idle
         else:
             status = Status.online
 
         if self.bot.debug_mode == "D":
-            activity = Activity(type=ActivityType.playing, name="in DEBUG MODE")
-        if self.bot.univ.DisableSaving:
-            activity = Activity(type=ActivityType.playing, name=f"with SAVING DISABLED")
+            activity = Activity(type=ActivityType.playing, name="IN DEBUG MODE")
+        elif self.bot.univ.DisableSaving:
+            activity = Activity(type=ActivityType.listening, name=f"SAVING DISABLED")
         else:
             activity = Activity(
                 type=ActivityType.watching,
-                name=f"{self.bot.command_prefix}help | {self.bot.TimeZone}: {utctime}"
+                name=f"{self.bot.command_prefix}help | {self.bot.tz}: {utctime}"
             )
-        
+
         await self.bot.change_presence(status=status, activity=activity)
-    
+   
     @loop(seconds=60)
     async def savetofile(self):
         hour = str(datetime.now().hour)
