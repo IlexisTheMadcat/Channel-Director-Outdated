@@ -5,6 +5,7 @@ from copy import deepcopy
 from datetime import datetime
 from os import getcwd
 from os.path import exists
+from pickle import dump, Unpickler
 
 # Site
 from dbl.client import DBLClient
@@ -24,33 +25,21 @@ class Globals:
         self.cwd = getcwd()
         self.LoadingUpdate = {"guildID": "bool"}
 
-        # if not exists(f"{self.cwd}\\Serialized\\data.pkl"):  # TODO: All data from Ram's Globals
-        #     print("[Unable to load] data.pkl not found. Replace file before shutting down. Saving disabled.")
-        #     self.DisableSaving = True
-        #     self.VanityAvatars = {"guildID": {"userID":["avatar_url", "previous", "is_blocked"]}}
-        #     self.Blacklists = {"authorID": (["channelID"], ["prefix"])}
-        #     self.ServerBlacklists = {"guildID": (["channelID"], ["prefix"])}
-        #     self.Closets = {"auhthorID": {"closet_name":"closet_url"}}
-        #     self.ChangelogCache = None
-        #
-        # else:
-        #     self.DisableSaving = False
-        #     with open(f"{self.cwd}\\Serialized\\data.pkl", "rb") as f:
-        #         try:
-        #             data = Unpickler(f).load()
-        #             self.VanityAvatars = data["VanityAvatars"]
-        #             self.Blacklists = data["Blacklists"]
-        #             self.Closets = data["Closets"]
-        #             self.ServerBlacklists = data["ServerBlacklists"]
-        #             self.ChangelogCache = data["ChangelogCache"]
-        #             print("[] Loaded data.pkl.")
-        #         except Exception as e:
-        #             self.VanityAvatars = {"guildID": {"userID":["avatar_url", "previous", "is_blocked"]}}
-        #             self.Blacklists = {"authorID": (["channelID"], ["prefix"])}
-        #             self.ServerBlacklists = {"guildID": (["channelID"], ["prefix"])}
-        #             self.Closets = {"auhthorID": {"closet_name": "closet_url"}}
-        #             self.ChangelogCache = None
-        #             print("[Data Reset] Unpickling Error:", e)
+        if not exists(f"{self.cwd}\\Serialized\\data.pkl"):
+            print("[Unable to save] data.pkl not found. Replace file before shutting down. Saving disabled.")
+            self.DisableSaving = True
+            self.Directories = {"guildID":{"catagoryID":0, "channelID":0, "msgID":0, "tree":{}}}
+
+        else:
+            self.DisableSaving = False
+            with open(f"{self.cwd}\\Serialized\\data.pkl", "rb") as f:
+                try:
+                    data = Unpickler(f).load()
+                    self.Directories = data["Directories"]
+                    print("[] Loaded data.pkl.")
+                except Exception as e:
+                    self.Directories = {"guildID":{"catagoryID":0, "channelID":0, "msgID":0, "tree":{}}}
+                    print("[Data Reset] Unpickling Error:", e)
 
 
 class helper_functions():
@@ -136,7 +125,7 @@ class helper_functions():
         try:
             dchannel = await self.bot.fetch_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])	
         except NotFound:
-            try:	
+            try:
                 cat = await self.bot.fetch_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])	
             except NotFound:
                 await ctx.send("You need to set up your directory again.")	
@@ -273,6 +262,7 @@ class Bot(DiscordBot):
 
         # Backwards patch Globals class for availability to cogs
         self.univ = Globals()
+        self.util = helper_functions(self)
         self.cwd = self.univ.cwd
 
         # Capture extra meta from init for cogs, former `global`s

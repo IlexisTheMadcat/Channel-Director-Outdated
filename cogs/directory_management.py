@@ -13,7 +13,10 @@ from discord.ext.commands.core import bot_has_permissions, command, has_permissi
 from discord.errors import NotFound
 
 # Local
-from utils.classes import Bot
+from utils.classes import (
+    Bot,
+    helper_functions
+)
 
 
 class Commands(Cog):
@@ -113,12 +116,12 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                         self.bot.univ.Directories.update({ctx.guild.id:{"categoryID":cat.id, "channelID":directory.id, "msgID":dmessage.id, "tree":tree}})
 
                         try:
-                            tree = await self.convert_to_directory(ctx, tree)
+                            tree = await self.bot.util.convert_to_directory(ctx, tree)
                         except TypeError:
                             await msg.edit(content="The setup failed because the file is either changed, corrupted, or outdated.")
                             return
                         else:
-                            await self.update_directory(ctx, note="Finished automated setup.")
+                            await self.bot.util.update_directory(ctx, note="Finished automated setup.")
                             await msg.edit(content=f"Finished setup. Get to the directory here: {directory.mention}")
 
                         self.bot.univ.LoadingUpdate.update({ctx.guild.id:False})
@@ -224,7 +227,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                 self.bot.univ.TearingDown.remove(ctx.guild.id)
                 await msg.edit(content="Teardown complete. Note that imported channels from that directory will no longer appear in the directory if you have it set up.")
                 if ctx.guild.id in self.bot.univ.Directories.keys():
-                    await self.update_directory(ctx, note="External category deletion; Imported channels from that category now removed.")
+                    await self.bot.util.update_directory(ctx, note="External category deletion; Imported channels from that category now removed.")
 
      
     @command(aliases=["new_ch"])
@@ -350,7 +353,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                         return
 
                     else:
-                        await self.update_directory(ctx, note=f"New channel; Name: {name}; Path: {directory}")
+                        await self.bot.util.update_directory(ctx, note=f"New channel; Name: {name}; Path: {directory}")
                         print(f"+ Added new channel to server \"{ctx.guild.name}\".")
             else:
                 await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.cwd}update`.")
@@ -444,7 +447,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                 return
                             self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][d[3]][d[4]].update({name:{}})
 
-                    await self.update_directory(ctx, note=f"New category; Name: {name}; Path: {directory}")
+                    await self.bot.util.update_directory(ctx, note=f"New category; Name: {name}; Path: {directory}")
                     print(f"+ Added new category to server \"{ctx.guild.name}\".")
             else:
                 await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
@@ -612,7 +615,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                         except TypeError:
                             await ctx.send("That's a channel silly! If you need to, go to the channel and delete it yourself. I currently cannot do that myself.")
 
-                    await self.update_directory(ctx, note=f"Deleted category; Name: {name}; Path: {directory}")
+                    await self.bot.util.update_directory(ctx, note=f"Deleted category; Name: {name}; Path: {directory}")
                     print(f"- Deleted category from server \"{ctx.guild.name}\".")
 
                 except KeyError as e:
@@ -690,7 +693,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                     return
                 
                 else:
-                    await self.update_directory(ctx, note=f"Renamed channel `name` to `rename` in path `directory`.")
+                    await self.bot.util.update_directory(ctx, note=f"Renamed channel `name` to `rename` in path `directory`.")
                     print(f"= Renamed a channel for server \"{ctx.guild.name}\".")
             else:
                 await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
@@ -788,7 +791,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                     return
                 
                 else:
-                    await self.update_directory(ctx, note=f"Moved channel `name` from path `directory` to `new_directory`.")
+                    await self.bot.util.update_directory(ctx, note=f"Moved channel `name` from path `directory` to `new_directory`.")
                     print(f"[] Moved a channel for server \"{ctx.guild.name}\".")
             else:
                 await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
@@ -862,7 +865,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                     await ctx.send(f"That directory doesn't exist.\n`Invalid category name: \"{e}\"`", delete_after=5)
                     return
 
-                await self.update_directory(ctx, note=f"Imported channel with name \"{name}\"; Path: \"{new_directory}\".")
+                await self.bot.util.update_directory(ctx, note=f"Imported channel with name \"{name}\"; Path: \"{new_directory}\".")
             
             else:
                 await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
@@ -927,10 +930,10 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                     await ctx.send(f"That directory doesn't exist.\n`Invalid category name: \"{e}\"`", delete_after=5)
                     return
 
-                await self.update_directory(ctx, note=f"Removed channel from directory, but was not deleted. Name: \"{name}\"; From Path: \"{directory}\".")
+                await self.bot.util.update_directory(ctx, note=f"Removed channel from directory, but was not deleted. Name: \"{name}\"; From Path: \"{directory}\".")
             
             else:
-                await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{BOT_PREFIX}update`.")
+                await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
         else:
             await ctx.send(f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
 
@@ -952,7 +955,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                 pass
 
             with open(f"{self.bot.cwd}\\Workspace\\cdr_directory.pkl", "wb+") as f:
-                data = await self.convert_to_readable(ctx)
+                data = await self.bot.util.convert_to_readable(ctx)
                 dump(data, f)
             
             with open(f"{self.bot.cwd}\\Workspace\\cdr_directory.pkl", "r") as f:
@@ -973,7 +976,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
     
         if ctx.guild.id in self.bot.univ.Directories.keys():
             await ctx.message.delete()
-            await self.update_directory(ctx, "Update requested manually.")
+            await self.bot.util.update_directory(ctx, "Update requested manually.")
         else:
             await ctx.send(f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
 

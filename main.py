@@ -35,21 +35,6 @@ bot = Bot(
     owner_id=331551368789622784
 )
 
-if not os.path.exists(f"{Dir1}\\Serialized\\data.pkl"):
-    print("[Unable to save] data.pkl not found. Replace file before shutting down. Saving disabled.")
-    univ.DisableSaving = True
-    univ.Directories = {"guildID":{"catagoryID":0, "channelID":0, "msgID":0, "tree":{}}}
-
-else:
-    univ.DisableSaving = False
-    with open(f"{Dir1}\\Serialized\\data.pkl", "rb") as f:
-        try:
-            data = pickle.Unpickler(f).load()
-            univ.Directories = data["Directories"]
-            print("[] Loaded data.pkl.")
-        except Exception as e:
-            univ.Directories = {"guildID":{"catagoryID":0, "channelID":0, "msgID":0, "tree":{}}}
-            print("[Data Reset] Unpickling Error:", e)
 
 """ Note: Channel names as keys are the name that the user gave, so they may rename it.
 {
@@ -85,4 +70,4 @@ else:
 
 bot.run(BOT_TOKEN)
 
-#--------------------------------------------------------------
+#-------------------------------------------------------------
