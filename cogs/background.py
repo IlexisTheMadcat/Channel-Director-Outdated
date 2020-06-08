@@ -2,6 +2,7 @@
 from datetime import datetime
 from os.path import exists
 from pickle import dump
+from asyncio import sleep
 
 # Site
 from discord.activity import Activity
@@ -37,11 +38,6 @@ class BackgroundTasks(Cog):
         else:
             status = Status.online
 
-        MechHub = await self.bot.get_guild(504090302928125954)
-        Ram = await MechHub.fetch_member(687427956364279873)
-        if Ram.status == Status.offline:
-            status = Status.dnd
-            activity = Activity(type=ActivityType.watching, name="my sister sleep...")
         if self.bot.debug_mode == "D":
             activity = Activity(type=ActivityType.playing, name="in DEBUG MODE")
         if self.bot.univ.DisableSaving:
@@ -82,9 +78,13 @@ class BackgroundTasks(Cog):
                 except Exception as e:
                     print(f"[{time} || Unable to save] Pickle dumping Error:", e)
 
-            self.bot.univ.Inactive = self.bot.univ.Inactive+1
+            self.bot.univ.Inactive = self.bot.univ.Inactive + 1
             print(f"[CDR: {time}] Saved data.")
 
+    @status_change.before_loop
+    async def wait(self):
+        await self.bot.wait_until_ready()
+        await sleep(60)
 
 def setup(bot: Bot):
     bot.add_cog(BackgroundTasks(bot))

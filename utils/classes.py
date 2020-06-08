@@ -21,6 +21,7 @@ from utils.tokens import Tokens
 
 class Globals:
     def __init__(self):
+        self.Inactive = 0
         self.TearingDown = list()
         self.cwd = getcwd()
         self.LoadingUpdate = {"guildID": "bool"}
