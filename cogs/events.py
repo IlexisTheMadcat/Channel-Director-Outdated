@@ -102,7 +102,7 @@ class Events(Cog):
     # Errors
     @Cog.listener()
     async def on_command_error(self, ctx: Context, error: Exception):
-        if self.bot.debug_mode != "D":
+        if not self.bot.debug_mode:
             msg = ctx.message
             if isinstance(error, BotMissingPermissions):
                 await ctx.message.delete()
