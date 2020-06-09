@@ -20,9 +20,9 @@ cdr:new_channel "root//Big House" "Livingroom"
 "Manage Messages" - To manage the directory channel so that it's kept clean.
 "Read Messages"   - To read commands.
 "Send Messages"   - To send notifications/messages for warnings, confirmations, etc.
-"Attach Files"    - To send the requested file from the command {BOT_PREFIX}save_directory.
+"Attach Files"    - To send the requested file from the command cdr:save_directory.
 ```
-*To see important announcements and command changes, Type and enter `{BOT_PREFIX}help updates`
+*To see important announcements and command changes, Type and enter `cdr:help updates`
 Use this if you think a command isn't working the same way it did last time you used it.*
 
 ### Commands
