@@ -100,7 +100,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
 
                         file = await file.save(f"{self.bot.cwd}\\Workspace\\incoming.pkl")
                         with open(f"{self.bot.cwd}\\Workspace\\incoming.pkl", "rb") as f:
-                            tree = Unpickler(f).load()
+                            tree = Unpickler(f).load() # ----------------------------------------- WARNING: USERS CAN UPLOAD MALICIOUS .PKLs MAKING THIS INSECURE.
 
                         os.remove(f"{self.bot.cwd}\\Workspace\\incoming.pkl")
 
