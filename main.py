@@ -116,11 +116,12 @@ async def on_ready():
           f"#-------------------------------#\n")
 
     for cog in INIT_EXTENSIONS:
-        print(f"| Loading initial cog {cog}")
+        print(f"| Loading initial cog {cog}", end="\r")
         try:
             bot.load_extension(f"cogs.{cog}")
         except Exception as e:
             print(f"| Failed to load extension {cog}\n|   {type(e).__name__}: {e}")
+        print("\n")
 
     print(f"#-------------------------------#\n"
           f"| Successfully logged in.\n"
