@@ -17,6 +17,7 @@ from discord.errors import NotFound, Forbidden
 # Local
 from utils.classes import Bot
 
+
 class Events(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
