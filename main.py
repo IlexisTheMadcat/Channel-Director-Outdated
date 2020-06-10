@@ -17,13 +17,9 @@ from discord.utils import oauth_url
 from utils.classes import Bot
 
 print("...\n\n#-------------------------------#")
-# print("Attempting to open bot_config.pkl...", end="\r")
-# try:
-#     open(join(getcwd(), "Serialized", "bot_config.pkl"), "r").close()
-# except FileNotFoundError:
-#     open(join(getcwd(), "Serialized", "bot_config.pkl"), "x").close()
 
-print("[] Loading bot_config.pkl...")
+print("Attempting to open bot_config.pkl...", end="\r")
+
 with open(join(getcwd(), "Serialized", "bot_config.pkl"), "rb") as f:
     try:
         config_data = Unpickler(f).load()

@@ -14,8 +14,7 @@ from discord.errors import NotFound
 
 # Local
 from utils.classes import (
-    Bot,
-    helper_functions
+    Bot
 )
 
 
@@ -27,7 +26,7 @@ class Commands(Cog):
     @command(name="setup", aliases=["su"])
     @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True, manage_roles=True)
     @has_permissions(manage_channels=True, manage_guild=True)
-    async def setup_directory(self, ctx: Context): 
+    async def setup_directory(self, ctx: Context):
         if not ctx.guild: 
             await ctx.send("This command cannot be used in a DM channel.")
             return
@@ -104,7 +103,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                                "`[✅]`")
                         await sleep(2)
 
-                        self.bot.univ.LoadingUpdate.update({ctx.guild.id: True})
+                        
                         await msg.edit(content="Setting up with attached file...")
 
                         file = await file.save(f"{self.bot.cwd}\\Workspace\\incoming.pkl")
@@ -119,21 +118,29 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                         await directory.set_permissions(ctx.guild.default_role, send_messages=False)
                         member_self = await ctx.guild.fetch_member(self.bot.user.id)
                         await directory.set_permissions(member_self, send_messages=True)
+                        await directory.set_permissions(ctx.author, send_messages=True)
 
                         dmessage = await directory.send("Adding channels...")
 
-                        try: 
-                            tree = await helper_functions.convert_to_directory(ctx, tree)
+                        try:
+                            self.bot.univ.Directories.update({ctx.guild.id: {"categoryID": cat.id, "channelID": directory.id, "msgID": dmessage.id, "tree": {}}})
+                            tree = await self.bot.convert_to_directory(ctx, directory)
+                            self.bot.univ.Directories[ctx.guild.id]["tree"] = tree
                         except TypeError as e:
+                            self.bot.univ.Directories.pop(ctx.guild.id)
+                            for i in cat.channels:
+                                await i.delete()
+                            await cat.delete()
                             await msg.edit(content=f"The setup failed because the file is either changed, corrupted, or outdated.\n`Error description: {e}`")
                             return
                         else: 
-                            await helper_functions.update_directory(ctx, note="Finished automated setup.")
+                            await self.bot.update_directory(ctx=ctx, note="Finished automated setup.")
                             await msg.edit(content=f"Finished setup. Get to the directory here: {directory.mention}")
 
-                        self.bot.univ.Directories.update({ctx.guild.id: {"categoryID": cat.id, "channelID": directory.id, "msgID": dmessage.id, "tree": tree}})
-                        self.bot.univ.LoadingUpdate.update({ctx.guild.id: False})
-                else: 
+                        
+                        return
+                else:
+                    
                     await msg.edit(content="Setting up now...")
                     cat = await ctx.guild.create_category("CDR: Directories (Bot Managed)")
                     directory = await cat.create_text_channel("directory", topic="Managers: Leave this channel on top for easy access. Also do not delete it.")
@@ -146,7 +153,8 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                     await msg.edit(content=f"Finished setup. Get to the directory here: {directory.mention}")
 
                     self.bot.univ.Directories.update({ctx.guild.id: {"categoryID": cat.id, "channelID": directory.id, "msgID": dmessage.id, "tree": {"root": {}}}})
-                
+                    
+                    return
      
     @command(name="teardown", aliases=["td"])
     @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
@@ -177,7 +185,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                     await msg.edit(content="Tearing down...")
                     self.bot.univ.TearingDown.append(ctx.guild.id)
                     try: 
-                        category = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
+                        category = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
                     except NotFound: 
                         await msg.edit(content="I couldn't find the category for the channels.")
                         self.bot.univ.Directories.pop(ctx.guild.id)
@@ -204,11 +212,11 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                 return
 
             try: 
-                category = await self.bot.get_channel(categoryID)
+                category = self.bot.get_channel(categoryID)
             except NotFound: 
                 await ctx.send("No category with that ID exists.")
             else: 
-                if not categoryID in [guild.id for guild in ctx.guild.channels]: 
+                if not categoryID in [guild.id for guild in ctx.guild.channels]:
                     await ctx.send("That category does exist, but it isn't in your server. Why would I let you do that? Spoiled prankster.")
                     return
     
@@ -235,7 +243,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                 self.bot.univ.TearingDown.remove(ctx.guild.id)
                 await msg.edit(content="Teardown complete. Note that imported channels from that directory will no longer appear in the directory if you have it set up.")
                 if ctx.guild.id in self.bot.univ.Directories.keys(): 
-                    await helper_functions.update_directory(ctx, note="External category deletion; Imported channels from that category now removed.")
+                    await self.bot.update_directory(ctx=ctx, note="External category deletion; Imported channels from that category now removed.")
 
      
     @command(aliases=["new_ch"])
@@ -250,7 +258,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
             if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]: 
                 await ctx.message.delete()
                 if ctx.guild.id in self.bot.univ.LoadingUpdate.keys(): 
-                    if self.bot.univ.LoadingUpdate[ctx.guild.id] == True: 
+                    if self.bot.univ.LoadingUpdate[ctx.guild.id]:
                         await ctx.send("The directory is being updated at the moment. Try again in a few seconds.", delete_after=10)
                         return
                 
@@ -289,8 +297,8 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                     await ctx.send("A channel or category in that directory already exists.", delete_after=5)
                                     return
 
-                                category = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
-                                dchannel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
+                                category = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
+                                dchannel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
                                 channel = await category.create_text_channel(f"finishing-creation", topic=f"Go back: {dchannel.mention}; Name: \"{name}\"")
                                 await channel.edit(name=str(f"{name}-{channel.id}"))
                         
@@ -304,8 +312,8 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                     await ctx.send("A channel or category in that directory already exists.", delete_after=5)
                                     return
 
-                                category = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
-                                dchannel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
+                                category = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
+                                dchannel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
                                 channel = await category.create_text_channel(f"finishing-creation", topic=f"Go back: {dchannel.mention}; Name: \"{name}\"")
                                 await channel.edit(name=str(f"{name}-{channel.id}"))            
             
@@ -319,8 +327,8 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                     await ctx.send("A channel or category in that directory already exists.", delete_after=5)
                                     return
 
-                                category = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
-                                dchannel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
+                                category = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
+                                dchannel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
                                 channel = await category.create_text_channel(f"finishing-creation", topic=f"Go back: {dchannel.mention}; Name: \"{name}\"")
                                 await channel.edit(name=str(f"{name}-{channel.id}"))
                                 
@@ -334,8 +342,8 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                     await ctx.send("A channel or category in that directory already exists.", delete_after=5)
                                     return
 
-                                category = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
-                                dchannel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
+                                category = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
+                                dchannel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
                                 channel = await category.create_text_channel(f"finishing-creation", topic=f"Go back: {dchannel.mention}; Name: \"{name}\"")
                                 await channel.edit(name=str(f"{name}-{channel.id}"))
                                 
@@ -349,8 +357,8 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                     await ctx.send("A channel or category in that directory already exists.", delete_after=5)
                                     return
 
-                                category = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
-                                dchannel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
+                                category = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
+                                dchannel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
                                 channel = await category.create_text_channel(f"finishing-creation", topic=f"Go back: {dchannel.mention}; Name: \"{name}\"")
                                 await channel.edit(name=str(f"{name}-{channel.id}"))
                                 
@@ -361,10 +369,10 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                         return
 
                     else: 
-                        await helper_functions.update_directory(ctx, note=f"New channel; Name: {name}; Path: {directory}")
+                        await self.bot.update_directory(ctx=ctx, note=f"New channel; Name: {name}; Path: {directory}")
                         print(f"+ Added new channel to server \"{ctx.guild.name}\".")
             else: 
-                await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.cwd}update`.")
+                await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
         else: 
             await ctx.send(f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
             return
@@ -455,7 +463,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                 return
                             self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][d[3]][d[4]].update({name: {}})
 
-                    await helper_functions.update_directory(ctx, note=f"New category; Name: {name}; Path: {directory}")
+                    await self.bot.update_directory(ctx=ctx, note=f"New category; Name: {name}; Path: {directory}")
                     print(f"+ Added new category to server \"{ctx.guild.name}\".")
             else: 
                 await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
@@ -487,7 +495,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                 for ik, iv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][name].items(): 
                                     if isinstance(iv, int): 
                                         try: 
-                                            channel = await self.bot.get_channel(iv)
+                                            channel = self.bot.get_channel(iv)
                                             await channel.delete()
                                         except NotFound: 
                                             pass
@@ -496,7 +504,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                         for xk, xv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][name][ik].items(): 
                                             if isinstance(xv, int): 
                                                 try: 
-                                                    channel = await self.bot.get_channel(xv)
+                                                    channel = self.bot.get_channel(xv)
                                                     await channel.delete()
                                                 except NotFound: 
                                                     pass
@@ -505,7 +513,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                                 for yk, yv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][name][ik][xk].items(): 
                                                     if isinstance(yv, int): 
                                                         try: 
-                                                            channel = await self.bot.get_channel(yv)
+                                                            channel = self.bot.get_channel(yv)
                                                             await channel.delete()
                                                         except NotFound: 
                                                             pass
@@ -514,7 +522,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                                         for zk, zv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][name][ik][xk][yk].items(): 
                                                             if isinstance(zv, int): 
                                                                 try: 
-                                                                    channel = await self.bot.get_channel(zv)
+                                                                    channel = self.bot.get_channel(zv)
                                                                     await channel.delete()
                                                                 except NotFound: 
                                                                     pass
@@ -531,7 +539,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                 for ik, iv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][name].items(): 
                                     if isinstance(iv, int): 
                                         try: 
-                                            channel = await self.bot.get_channel(iv)
+                                            channel = self.bot.get_channel(iv)
                                             await channel.delete()
                                         except NotFound: 
                                             pass
@@ -540,7 +548,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                         for xk, xv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][name][ik].items(): 
                                             if isinstance(xv, int): 
                                                 try: 
-                                                    channel = await self.bot.get_channel(xv)
+                                                    channel = self.bot.get_channel(xv)
                                                     await channel.delete()
                                                 except NotFound: 
                                                     pass
@@ -549,7 +557,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                                 for yk, yv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][name][ik][xk].items(): 
                                                     if isinstance(yv, int): 
                                                         try: 
-                                                            channel = await self.bot.get_channel(yv)
+                                                            channel = self.bot.get_channel(yv)
                                                             await channel.delete()
                                                         except NotFound: 
                                                             pass
@@ -558,7 +566,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                                         for zk, zv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][name][ik][xk][yk].items(): 
                                                             if isinstance(zv, int): 
                                                                 try: 
-                                                                    channel = await self.bot.get_channel(zv)
+                                                                    channel = self.bot.get_channel(zv)
                                                                     await channel.delete()
                                                                 except NotFound: 
                                                                     pass
@@ -575,7 +583,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                 for ik, iv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][name].items(): 
                                     if isinstance(iv, int): 
                                         try: 
-                                            channel = await self.bot.get_channel(iv)
+                                            channel = self.bot.get_channel(iv)
                                             await channel.delete()
                                         except NotFound: 
                                             pass
@@ -584,7 +592,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                         for xk, xv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][name][ik].items(): 
                                             if isinstance(xv, int): 
                                                 try: 
-                                                    channel = await self.bot.get_channel(xv)
+                                                    channel = self.bot.get_channel(xv)
                                                     await channel.delete()
                                                 except NotFound: 
                                                     pass
@@ -593,7 +601,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                                 for yk, yv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][name][ik][xk].items(): 
                                                     if isinstance(yv, int): 
                                                         try: 
-                                                            channel = await self.bot.get_channel(yv)
+                                                            channel = self.bot.get_channel(yv)
                                                             await channel.delete()
                                                         except NotFound: 
                                                             pass
@@ -611,7 +619,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                                 for ik, iv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][d[3]][name].items(): 
                                     if isinstance(iv, int): 
                                         try: 
-                                            channel = await self.bot.get_channel(iv)
+                                            channel = self.bot.get_channel(iv)
                                             await channel.delete()
                                         except NotFound: 
                                             pass
@@ -623,7 +631,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                         except TypeError: 
                             await ctx.send("That's a channel silly! If you need to, go to the channel and delete it yourself. I currently cannot do that myself.")
 
-                    await helper_functions.update_directory(ctx, note=f"Deleted category; Name: {name}; Path: {directory}")
+                    await self.bot.update_directory(ctx=ctx, note=f"Deleted category; Name: {name}; Path: {directory}")
                     print(f"- Deleted category from server \"{ctx.guild.name}\".")
 
                 except KeyError as e: 
@@ -660,36 +668,36 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                     if len(d) == 1: 
                         self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][rename] = self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]].pop(name)
                         if isinstance(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][rename], int): 
-                            dchannel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
-                            channel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][rename])
+                            dchannel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
+                            channel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][rename])
                             await channel.edit(topic=f"Go back: {dchannel.mention}; Name: \"{rename}\"")
 
                     elif len(d) == 2: 
                         self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][rename] = self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]].pop(name)
                         if isinstance(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][rename], int): 
-                            dchannel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
-                            channel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][rename])
+                            dchannel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
+                            channel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][rename])
                             await channel.edit(topic=f"Go back: {dchannel.mention}; Name: \"{rename}\"")
                                                
                     elif len(d) == 3: 
                         self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][rename] = self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]].pop(name)
                         if isinstance(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][rename], int): 
-                            dchannel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
-                            channel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][rename])
+                            dchannel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
+                            channel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][rename])
                             await channel.edit(topic=f"Go back: {dchannel.mention}; Name: \"{rename}\"")
                                                
                     elif len(d) == 4: 
                         self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][d[3]][rename] = self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][d[3]].pop(name)
                         if isinstance(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][d[3]][rename], int): 
-                            dchannel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
-                            channel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][rename])
+                            dchannel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
+                            channel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][rename])
                             await channel.edit(topic=f"Go back: {dchannel.mention}; Name: \"{rename}\"")
                                                
                     elif len(d) == 5: 
                         self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][d[3]][d[4]][rename] = self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][d[3]][d[4]].pop(name)
                         if isinstance(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][d[3]][d[4]][rename], int): 
-                            dchannel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
-                            channel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][rename])
+                            dchannel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
+                            channel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][rename])
                             await channel.edit(topic=f"Go back: {dchannel.mention}; Name: \"{rename}\"")
     
                     else: 
@@ -700,7 +708,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                     return
                 
                 else: 
-                    await helper_functions.update_directory(ctx, note=f"Renamed channel `name` to `rename` in path `directory`.")
+                    await self.bot.update_directory(ctx=ctx, note=f"Renamed channel `name` to `rename` in path `directory`.")
                     print(f"= Renamed a channel for server \"{ctx.guild.name}\".")
             else: 
                 await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
@@ -799,7 +807,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                     return
                 
                 else: 
-                    await helper_functions.update_directory(ctx, note=f"Moved channel `name` from path `directory` to `new_directory`.")
+                    await self.bot.update_directory(ctx=ctx, note=f"Moved channel `name` from path `directory` to `new_directory`.")
                     print(f"[] Moved a channel for server \"{ctx.guild.name}\".")
             else: 
                 await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
@@ -872,7 +880,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                     await ctx.send(f"That directory doesn't exist.\n`Invalid category name: \"{e}\"`", delete_after=5)
                     return
 
-                await helper_functions.update_directory(ctx, note=f"Imported channel with name \"{name}\"; Path: \"{new_directory}\".")
+                await self.bot.update_directory(ctx=ctx, note=f"Imported channel with name \"{name}\"; Path: \"{new_directory}\".")
             
             else: 
                 await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
@@ -936,7 +944,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                     await ctx.send(f"That directory doesn't exist.\n`Invalid category name: \"{e}\"`", delete_after=5)
                     return
 
-                await helper_functions.update_directory(ctx, note=f"Removed channel from directory, but was not deleted. Name: \"{name}\"; From Path: \"{directory}\".")
+                await self.bot.update_directory(ctx=ctx, note=f"Removed channel from directory, but was not deleted. Name: \"{name}\"; From Path: \"{directory}\".")
             
             else: 
                 await ctx.send(f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
@@ -960,12 +968,11 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                 pass
 
             with open(f"{self.bot.cwd}\\Workspace\\cdr_directory.pkl", "wb+") as f: 
-                data = await helper_functions.convert_to_readable(ctx)
+                data = await self.bot.convert_to_readable(ctx=ctx)
                 dump(data, f)
             
-            with open(f"{self.bot.cwd}\\Workspace\\cdr_directory.pkl", "r") as f: 
-                file = File(f"{self.bot.cwd}\\Workspace\\cdr_directory.pkl")
-                await ctx.send(f"This file contains pickled data using Python. Use the command `{self.bot.command_prefix}setup` and attach the file to load it.", file=file)
+            file = File(f"{self.bot.cwd}\\Workspace\\cdr_directory.pkl")
+            await ctx.send(f"This file contains pickled data using Python. Use the command `{self.bot.command_prefix}setup` and attach the file to load it.", file=file)
 
         else: 
             await ctx.send(f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
@@ -980,7 +987,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
     
         if ctx.guild.id in self.bot.univ.Directories.keys(): 
             await ctx.message.delete()
-            await helper_functions.update_directory(ctx, "Update requested manually.")
+            await self.bot.update_directory(ctx=ctx, note="Update requested manually.")
         else: 
             await ctx.send(f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
 
