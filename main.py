@@ -53,8 +53,6 @@ print(f"Running in: {bot.cwd}")
 print(f"Discord API version: {__version__}")
 
 
-
-
 @bot.event
 async def on_ready():
 
@@ -72,35 +70,11 @@ async def on_ready():
     )
 
     await bot.change_presence(status=Status.idle, activity=Activity(type=ActivityType.listening, name="Just woke up."))
-    # check changelog for differences since last save
-    with open(f"{bot.cwd}\\changelog.txt", "r") as clfp:
-        content = clfp.read()
-        if content != bot.univ.ChangelogCache: 
-            for guild in bot.guilds:
-                if guild.system_channel:
-                    try:
-                        await guild.system_channel.send(f"Changelog updated:\n```{content} ​```")
-                    except Exception:
-                        pass
-
-            bot.univ.ChangelogCache = content
-            with open(f"{bot.cwd}\\Serialized\\data.pkl", "wb") as pkfp:
-                try:
-                    data = {
-                        "Directories": bot.univ.Directories,
-                        "ChangelogCache": bot.univ.ChangelogCache
-                    }
-
-                    dump(data, pkfp)
-                except Exception:
-                    pass
-
-            print("[] Sent changelog updates.")
 
     print(f"\n"
-          f"#-------------------------------#"
-          f"| Loading initial cogs..."
-          f"#-------------------------------#")
+          f"#-------------------------------#\n"
+          f"| Loading initial cogs...\n"
+          f"#-------------------------------#\n")
 
     for cog in INIT_EXTENSIONS:
         print(f"| Loading initial cog {cog}")
