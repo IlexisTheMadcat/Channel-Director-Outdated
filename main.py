@@ -161,7 +161,7 @@ if __name__ == "__main__":
             if not bot.auth["MWS_BOT_TOKEN"]:
                 raise LoginFailure
 
-            with suppress(RuntimeError):
+            with suppress(RuntimeError, RuntimeWarning):
                 bot.run()
 
         except LoginFailure:
