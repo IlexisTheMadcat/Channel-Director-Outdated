@@ -410,8 +410,8 @@ class Globals:
                 try:
                     data = Unpickler(f).load()
                     self.Directories = data["Directories"]
-                    print("#-------------------------------#"
-                          "[] Loaded data.pkl."
+                    print("#-------------------------------#\n"
+                          "[] Loaded data.pkl.\n"
                           "#-------------------------------#\n")
                 except Exception as e:
                     self.Directories = {"guildID": {"catagoryID": 0, "channelID": 0, "msgID": 0, "tree": {}}}

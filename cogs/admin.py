@@ -432,7 +432,11 @@ class Admin(Cog):
                 em.color = 0x000000
 
         if not option:
-            em.description = f"The options and values are listed below:\n```debug_mode: {self.bot.debug_mode}\nauto_pull: {self.bot.auto_pull}\ntz: {self.bot.tz}\n```"
+            em.description = f"The options and values are listed below:\n" \
+                             f"```debug_mode: {self.bot.debug_mode}\n" \
+                             f"auto_pull: {self.bot.auto_pull}\n" \
+                             f"tz: {self.bot.tz}\n" \
+                             f"prefix: {self.bot.command_prefix}```"
             em.color = 0x0000FF
 
         await ctx.send(embed=em)

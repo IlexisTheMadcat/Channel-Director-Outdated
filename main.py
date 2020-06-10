@@ -23,6 +23,7 @@ print("...\n\n#-------------------------------#")
 # except FileNotFoundError:
 #     open(join(getcwd(), "Serialized", "bot_config.pkl"), "x").close()
 
+print("[] Loading bot_config.pkl...")
 with open(join(getcwd(), "Serialized", "bot_config.pkl"), "rb") as f:
     try:
         config_data = Unpickler(f).load()
@@ -31,14 +32,14 @@ with open(join(getcwd(), "Serialized", "bot_config.pkl"), "rb") as f:
         debug_mode = False
         auto_pull = True
         tz = "UTC"
-        prefix = ":>"
+        prefix = "cdr:"
     else:
         try:
             debug_mode = config_data["debug_mode"]
             auto_pull = config_data["auto_pull"]
             tz = config_data["tz"]
             prefix = config_data["prefix"]
-            print(f"Loaded bot_default.pkl{' '*20}")
+            print(f"Loaded bot_config.pkl{' '*20}")
         except KeyError:
             print(f'[Using defaults] bot_config.pkl file improperly formatted.{" "*35}')  # print excess spaces to fully overwrite the '\r' above
             debug_mode = False  # Print exceptions to stdout. Some errors will not be printed for some reason, such as NameError outside of commands.
