@@ -21,7 +21,7 @@ class BackgroundTasks(Cog):
         self.bot = bot
         # self.DBLtoken = "token"
         # self.dblpy = DBLClient(self.bot, self.DBLtoken, autopost=True)
-        self.savetofile.start()
+        self.save_data.start()
         self.status_change.start()
 
     @loop(seconds=60)
