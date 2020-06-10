@@ -152,8 +152,8 @@ class helper_functions():
     async def convert_to_directory(self, ctx, directory):
         # This function should be used in an automatic setup.
         # 'ctx' must meet the requirements for getting .guild. 'directory' is the directory from the unpickled file attached.
-        cat = await self.bot.fetch_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
-        dchannel = await self.bot.fetch_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
+        cat = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
+        dchannel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
 
         if isinstance(directory, dict):
             for ik, iv in directory["root"].items():
@@ -199,10 +199,10 @@ class helper_functions():
     async def update_directory(self, ctx,
                                note=""):  # ctx must meet the requirements for acessing .guild and a messagable.
         try:
-            dchannel = await self.bot.fetch_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
+            dchannel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
         except NotFound:
             try:
-                cat = await self.bot.fetch_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
+                cat = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
             except NotFound:
                 await ctx.send("You need to set up your directory again.")
                 self.bot.univ.Directories.pop(ctx.guild.id)
@@ -240,7 +240,7 @@ You are free to move this channel, but it's best to leave on top.
                     for ik, iv in self.bot.univ.Directories[ctx.guild.id]["tree"]["root"].items():
                         if isinstance(iv, int):
                             try:
-                                channel = await self.bot.fetch_channel(iv)
+                                channel = await self.bot.get_channel(iv)
                             except NotFound:
                                 self.bot.univ.Directories[ctx.guild.id]["tree"]["root"].pop(ik)
                                 return False
@@ -252,7 +252,7 @@ You are free to move this channel, but it's best to leave on top.
                             for xk, xv in self.bot.univ.Directories[ctx.guild.id]["tree"]["root"][ik].items():
                                 if isinstance(xv, int):
                                     try:
-                                        channel = await self.bot.fetch_channel(xv)
+                                        channel = await self.bot.get_channel(xv)
                                     except NotFound:
                                         self.bot.univ.Directories[ctx.guild.id]["tree"]["root"][ik].pop(xk)
                                         return False
@@ -264,7 +264,7 @@ You are free to move this channel, but it's best to leave on top.
                                     for yk, yv in self.bot.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk].items():
                                         if isinstance(yv, int):
                                             try:
-                                                channel = await self.bot.fetch_channel(yv)
+                                                channel = await self.bot.get_channel(yv)
                                             except NotFound:
                                                 self.bot.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk].pop(yk)
                                                 return False
@@ -277,7 +277,7 @@ You are free to move this channel, but it's best to leave on top.
                                             self.bot.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][yk].items():
                                                 if isinstance(zv, int):
                                                     try:
-                                                        channel = await self.bot.fetch_channel(zv)
+                                                        channel = await self.bot.get_channel(zv)
                                                     except NotFound:
                                                         self.bot.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][
                                                             yk].pop(zk)
@@ -291,7 +291,7 @@ You are free to move this channel, but it's best to leave on top.
                                                     self.bot.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][yk][zk].items():
                                                         if isinstance(av, int):
                                                             try:
-                                                                channel = await self.bot.fetch_channel(av)
+                                                                channel = await self.bot.get_channel(av)
                                                             except NotFound:
                                                                 self.bot.univ.Directories[ctx.guild.id]["tree"]["root"][
                                                                     ik][xk][yk][zk].pop(ak)
@@ -302,7 +302,7 @@ You are free to move this channel, but it's best to leave on top.
                     return True
 
                 while True:
-                    dchannel = await self.bot.fetch_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
+                    dchannel = await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
                     msg = await dchannel.fetch_message(self.bot.univ.Directories[ctx.guild.id]["msgID"])
                     result = await read()
                     if result is False:
@@ -397,6 +397,8 @@ class Globals:
     def __init__(self):
         self.Inactive = 0
         self.Loops = []
+        self.LoadingUpdate = []
+        self.TearingDown = []
         self.Directories = {"guildID": {"catagoryID": 0, "channelID": 0, "msgID": 0, "tree": {}}}
         self.cwd = getcwd()
 
