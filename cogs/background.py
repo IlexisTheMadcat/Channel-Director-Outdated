@@ -120,17 +120,17 @@ class BackgroundTasks(Cog):
                     print("[Unknown Error] Pickle dumping error:", e)
 
             self.bot.univ.Inactive = self.bot.univ.Inactive + 1
-            print(f"[CDR: {time}] Saved data.", end="\r")
+            print(f"[CDR: {time}] Saved data.", end="\n" if not self.bot.auto_pull else "\r")
 
         if self.bot.auto_pull:
-            print(f"[CDR: {time}] Saved data. Checking git repository for changes...{' '*30}", end="\r")
+            print(f"[CDR: {time}] Saved data. Auto-pull: Checking git repository for changes...{' '*30}", end="\r")
             resp = popen("git pull").read()  # TODO: `git pull` refuses to check for real updates on the testing branch
             resp = f"```diff\n{resp}\n```"
             if str(resp) != f"```diff\nAlready up to date.\n\n```":
                 for i in self.bot.owner_ids:
                     owner = self.bot.get_user(i)
                     await owner.send(f"**__Auto-pulled from github repository and restarted cogs.__**\n{resp}")
-                    print(f"[CDR: {time}] Saved data. Changes sent to owner via Discord.")
+                    print(f"[CDR: {time}] Saved data. Auto-pull: Changes sent to owner via Discord.")
 
                 for x_loop in self.bot.univ.Loops:
                     x_loop.cancel()
@@ -139,7 +139,7 @@ class BackgroundTasks(Cog):
                 for module in modules.keys():
                     self.bot.reload_extension(module)
             else:
-                print(f'[CDR: {time}] Saved data. No new changes.{" "*30}')
+                print(f'[CDR: {time}] Saved data. Auto-pull: No new changes.{" "*30}')
 
     @status_change.before_loop
     async def sc_wait(self):

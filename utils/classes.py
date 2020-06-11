@@ -19,7 +19,6 @@ from discord.ext.commands.converter import IDConverter
 from discord.ext.commands.errors import BadArgument
 from discord.user import User
 from discord.utils import find, get
-from typing import List
 
 # Local
 from utils.fileinterface import PickleInterface
@@ -496,4 +495,15 @@ You are free to move this channel, but it's best to leave on top.
                                     f"Please try again.\n`Error description: [{e}]`",
                                     delete_after=20)
                             return
+
         self.univ.LoadingUpdate.update({ctx.guild.id: False})
+
+# class Navigator:
+#     def __init__(self, bot):
+#         self.bot = bot
+#
+#     @staticmethod
+#     async def compile_and_send(self, ctx: Context, **items: {str: str}):  # **items is a dict of str("title"):str("Data")
+#         above = list([str()])
+#         selected = str()
+#         below = list([str()])

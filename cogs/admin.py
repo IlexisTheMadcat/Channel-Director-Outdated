@@ -9,6 +9,7 @@ from copy import deepcopy
 # Site
 # from discord.abc import Messageable
 # from discord.channel import TextChannel
+from discord import AppInfo, Permissions
 from discord.embeds import Embed
 from discord.ext.commands.cog import Cog
 from discord.ext.commands.context import Context
@@ -21,11 +22,11 @@ from discord.ext.commands.errors import (
     ExtensionNotLoaded,
     NoEntryPointError
 )
-# from discord.permissions import Permissions
-# from discord.utils import oauth_url
 
 # Local
+
 from utils.classes import Bot  # , GlobalTextChannelConverter
+
 
 class Admin(Cog):
     """Administrative Commands"""
@@ -33,15 +34,6 @@ class Admin(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.say_dest = None
-
-    @staticmethod
-    def color(ctx: Context):
-        """Color for embeds"""
-
-        if ctx.guild:
-            return ctx.guild.me.color
-        else:
-            return None
 
     """ ######################
          Managing Bot Modules
@@ -253,23 +245,6 @@ class Admin(Cog):
     """ ######################
          General Use Commands
         ###################### """
-
-    # @is_owner()  # TODO: My invite command if you wanted to re-use it
-    # @command(name='invite')
-    # async def invite(self, ctx: Context):
-    #     """Sends an OAuth bot invite URL"""
-    #
-    #     app_info: AppInfo = await self.bot.application_info()
-    #     permissions = Permissions(536881152)
-    #
-    #     em = Embed(
-    #         title=f'OAuth URL for {self.bot.user.name}',
-    #         description=f'[Click Here]'
-    #                     f'({oauth_url(app_info.id, permissions)}) '
-    #                     f'to invite {self.bot.user.name} to your guild.',
-    #         color=self.color(ctx)
-    #     )
-    #     await ctx.send(embed=em)
 
     # @is_owner()
     # @group(name="say", invoke_without_command=True)

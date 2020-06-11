@@ -1,6 +1,6 @@
 
 # Lib
-from traceback import print_tb
+
 # Site
 from discord.channel import CategoryChannel
 from discord.ext.commands.context import Context
@@ -21,21 +21,25 @@ from utils.classes import Bot
 class Events(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
-     
+
+    @Cog.listener()
+    async def on_reaction_add(self, reaction, user):
+        pass
+
     @Cog.listener()
     async def on_guild_channel_delete(self, channel):
         if isinstance(channel, CategoryChannel):
             try:
                 if channel.guild.id not in self.bot.univ.TearingDown and channel.id == self.bot.univ.Directories[channel.guild.id]["categoryID"]:
                     try:
-                        directory = await self.bot.bot.fetch_channel(self.bot.univ.Directories[channel.guild.id]["channelID"])
+                        directory = await self.bot.fetch_channel(self.bot.univ.Directories[channel.guild.id]["channelID"])
                     except NotFound:
                         return
 
                     try:
                         dmessage = await directory.fetch_message(self.bot.univ.Directories[channel.guild.id]["msgID"])
                     except NotFound:
-                        await self.update_directory(channel, note="Repaired directory message.")
+                        await self.bot.update_directory(channel, note="Repaired directory message.")
                         
                     try: 
                         await dmessage.edit(content="All channels have been disorganized!")
@@ -62,7 +66,7 @@ class Events(Cog):
                     pass
                 else:
                     async with dchannel.typing():
-                        await self.update_directory(channel, note="Updated automatically following channel deletion by user.")
+                        await self.bot.update_directory(channel, note="Updated automatically following channel deletion by user.")
                     self.bot.univ.LoadingUpdate[channel.guild.id] = False
 
     @Cog.listener()

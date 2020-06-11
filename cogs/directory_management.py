@@ -124,7 +124,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
 
                         try:
                             self.bot.univ.Directories.update({ctx.guild.id: {"categoryID": cat.id, "channelID": directory.id, "msgID": dmessage.id, "tree": {}}})
-                            tree = await self.bot.convert_to_directory(ctx, directory)
+                            tree = await self.bot.convert_to_directory(ctx, tree)
                             self.bot.univ.Directories[ctx.guild.id]["tree"] = tree
                         except TypeError as e:
                             self.bot.univ.Directories.pop(ctx.guild.id)
@@ -216,7 +216,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
             except NotFound: 
                 await ctx.send("No category with that ID exists.")
             else: 
-                if not categoryID in [guild.id for guild in ctx.guild.channels]:
+                if categoryID not in [guild.id for guild in ctx.guild.channels]:
                     await ctx.send("That category does exist, but it isn't in your server. Why would I let you do that? Spoiled prankster.")
                     return
     
@@ -244,7 +244,6 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                 await msg.edit(content="Teardown complete. Note that imported channels from that directory will no longer appear in the directory if you have it set up.")
                 if ctx.guild.id in self.bot.univ.Directories.keys(): 
                     await self.bot.update_directory(ctx=ctx, note="External category deletion; Imported channels from that category now removed.")
-
      
     @command(aliases=["new_ch"])
     @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
@@ -283,7 +282,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                     elif len(d) == 5: 
                         self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][d[3]][d[4]]
                         
-                except KeyError as e: 
+                except KeyError as e:
                     await ctx.send(f"That directory doesn't exist.\n`Invalid category: {e}`", delete_after=5)
                     return
                 
@@ -390,7 +389,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
             if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]: 
                 await ctx.message.delete()
                 if ctx.guild.id in self.bot.univ.LoadingUpdate.keys(): 
-                    if self.bot.univ.LoadingUpdate[ctx.guild.id] == True: 
+                    if self.bot.univ.LoadingUpdate[ctx.guild.id]:
                         await ctx.send("The directory is being updated at the moment. Try again in a few seconds.", delete_after=10)
                         return
                 
