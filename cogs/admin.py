@@ -167,7 +167,7 @@ class Admin(Cog):
                 description=f"Module `{module}` unloaded successfully",
                 color=0x00FF00
             )
-        
+
         await ctx.send(embed=em)
 
     @is_owner()
@@ -239,7 +239,7 @@ class Admin(Cog):
                 description=f"Module `{module}` reloaded successfully",
                 color=0x00FF00
             )
-    
+
         await ctx.send(embed=em)
 
     """ ######################
@@ -333,7 +333,9 @@ class Admin(Cog):
 
     @is_owner()
     @command(name="config", aliases=["bot"])
+
     async def settings(self, ctx, option = None, new_value = None):
+
         """Manage Bot settings"""
         em = Embed(title="Administration: Config", description="Description not set.", color=0x000000)
         if option:
@@ -355,7 +357,7 @@ class Admin(Cog):
                 elif not new_value:
                     em.description = f"The current value for {option} is:\n`{self.bot.auto_pull}`"
                     em.color = 0x0000FF
-            
+
             elif option == "debug_mode":
                 if new_value in ["True", "False"]:
                     original = deepcopy(self.bot.debug_mode)
@@ -374,7 +376,7 @@ class Admin(Cog):
                 elif not new_value:
                     em.description = f"The current value for {option} is:\n`{self.bot.debug_mode}`"
                     em.color = 0x0000FF
-            
+
             elif option == "tz":
                 if new_value in ["EST", "CST", "UTC"]:
                     original = deepcopy(self.bot.tz)
@@ -382,7 +384,7 @@ class Admin(Cog):
 
                     em.description = f"{ctx.author.mention} updated \"{option}\" to \"{new_value}\".\n`Original value: {original}`"
                     em.color = 0x00FF00
-            
+
                 elif new_value:
                     em.description = f"An improper value was passed.\n`Valid responses for {option}: [EST], [CST], [UTC]`"
                     em.color = 0xFF0000
@@ -401,7 +403,7 @@ class Admin(Cog):
             elif not new_value:
                 em.description = f"The current value for {option} is:\n`{self.bot.command_prefix}`"
                 em.color = 0x0000FF
-            
+
             else:
                 em.description = f"Bot configuration option not found."
                 em.color = 0x000000
@@ -430,6 +432,7 @@ class Admin(Cog):
             try:
                 data = {
                     "Directories": self.bot.univ.Directories
+
                 }
 
                 dump(data, f)

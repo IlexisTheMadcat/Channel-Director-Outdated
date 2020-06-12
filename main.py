@@ -92,6 +92,7 @@ bot.remove_command("help")
 print("#-------------------------------#")
 print(f"Running in: {bot.cwd}")
 print(f"Discord API version: {__version__}")
+
 print("#-------------------------------#\n")
 
 
