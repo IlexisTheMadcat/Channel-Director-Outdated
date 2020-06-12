@@ -171,10 +171,10 @@ class Globals:
         self.Directories = {"guildID": {"catagoryID": 0, "channelID": 0, "msgID": 0, "tree": {}}}
         self.cwd = getcwd()
 
-        if exists(f"{self.cwd}\\Serialized\\data.pkl"):
-            open(f"{self.cwd}\\Serialized\\data.pkl").close()
+        if exists(f"{self.cwd}/Serialized/data.pkl"):
+            open(f"{self.cwd}/Serialized/data.pkl").close()
 
-        with open(f"{self.cwd}\\Serialized\\data.pkl", "rb") as f:
+        with open(f"{self.cwd}/Serialized/data.pkl", "rb") as f:
             try:
                 data = Unpickler(f).load()
                 self.Directories = data["Directories"]
@@ -201,7 +201,7 @@ class Bot(DiscordBot):
         self.command_prefix = kwargs.pop("commands_prefix", ":>")
 
         # Attribute for accessing tokens from file
-        self.auth = PickleInterface(f"{self.cwd}\\Serialized\\tokens.pkl")
+        self.auth = PickleInterface(f"{self.cwd}/Serialized/tokens.pkl")
 
         # Attribute will be filled in `on_ready`
         self.owner: User = kwargs.pop("owner", None)
@@ -243,7 +243,7 @@ class Bot(DiscordBot):
         time = f"{hour}:{minute}, {date}"
 
         print("Saving...", end="\r")
-        with open(f"{self.cwd}\\Serialized\\data.pkl", "wb") as f:
+        with open(f"{self.cwd}/Serialized/data.pkl", "wb") as f:
             try:
                 data = {
                     "Directories": self.univ.Directories
