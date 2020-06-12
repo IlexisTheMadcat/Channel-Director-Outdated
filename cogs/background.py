@@ -124,7 +124,7 @@ class BackgroundTasks(Cog):
 
         if self.bot.auto_pull:
             print(f"[CDR: {time}] Saved data. Auto-pull: Checking git repository for changes...{' '*30}", end="\r")
-            resp = popen("git pull").read()  # TODO: `git pull` refuses to check for real updates on the testing branch
+            resp = popen("git pull").read()
             resp = f"```diff\n{resp}\n```"
             if str(resp) != f"```diff\nAlready up to date.\n\n```":
                 for i in self.bot.owner_ids:

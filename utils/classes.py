@@ -401,7 +401,7 @@ You are free to move this channel, but it's best to leave on top.
                                 self.univ.Directories[ctx.guild.id]["tree"]["root"].pop(ik)
                                 return False
                             else:
-                                message_lines.append(f"**ーー [** {ik} **>>>** ||{channel.mention}||")
+                                message_lines.append(f"ーー **[** {ik} **>>>** ||{channel.mention}||")
 
                         elif isinstance(iv, dict):
                             message_lines.append(f"**ーー Category: [** {ik} **]**")
@@ -412,7 +412,7 @@ You are free to move this channel, but it's best to leave on top.
                                         self.univ.Directories[ctx.guild.id]["tree"]["root"][ik].pop(xk)
                                         return False
                                     else:
-                                        message_lines.append(f"**ーーーー [** {xk} **>>>** ||{channel.mention}||")
+                                        message_lines.append(f"ーーーー **[** {xk} **>>>** ||{channel.mention}||")
 
                                 elif isinstance(xv, dict):
                                     message_lines.append(f"**ーーーー Category: [** {xk} **]**")
@@ -423,7 +423,7 @@ You are free to move this channel, but it's best to leave on top.
                                                 self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk].pop(yk)
                                                 return False
                                             else:
-                                                message_lines.append(f"**ーーーーーー [** {yk} **>>>** ||{channel.mention}||")
+                                                message_lines.append(f"ーーーーーー **[** {yk} **>>>** ||{channel.mention}||")
 
                                         elif isinstance(yv, dict):
                                             message_lines.append(f"**ーーーーーー Category: [** {yk} **]**")
@@ -434,7 +434,7 @@ You are free to move this channel, but it's best to leave on top.
                                                         self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][yk].pop(zk)
                                                         return False
                                                     else:
-                                                        message_lines.append(f"**ーーーーーーーー [** {zk} **>>>** ||{channel.mention}||")
+                                                        message_lines.append(f"ーーーーーーーー **[** {zk} **>>>** ||{channel.mention}||")
 
                                                 elif isinstance(zv, dict):
                                                     message_lines.append(f"**ーーーーーーーー Category: [** {zk} **]**")
@@ -445,7 +445,7 @@ You are free to move this channel, but it's best to leave on top.
                                                                 self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][yk][zk].pop(ak)
                                                                 return False
                                                             else:
-                                                                message_lines.append(f"**ーーーーーーーーーー [** {ak} **>>>** ||{channel.mention}||")
+                                                                message_lines.append(f"ーーーーーーーーーー **[** {ak} **>>>** ||{channel.mention}||")
 
                     return True
 
