@@ -57,12 +57,23 @@ New? Try these commands in your server:
 ```
 Required Permissions:
 ```
-"Manage Roles"    - To set the directory channel so that only the server owner may use it until further permissions are set.
-"Manage Channels" - To create new channels.
-"Manage Messages" - To manage the directory channel so that it's kept clean.
-"Read Messages"   - To read commands.
-"Send Messages"   - To send notifications/messages for warnings, confirmations, etc.
-"Attach Files"    - To send the requested file from the command {BOT_PREFIX}save_directory.
+"Manage Roles"
+To set the directory channel so that only the server owner may use it until further permissions are set.
+
+"Manage Channels"
+To create new channels.
+
+"Manage Messages"
+To manage the directory channel so that it's kept clean.
+
+"Read Messages"
+To read commands.
+
+"Send Messages"
+To send notifications/messages for warnings, confirmations, etc.
+
+"Attach Files"
+To send the requested file from the command {BOT_PREFIX}save_directory.
 ```
 To see important announcements and command changes, Type and enter `{BOT_PREFIX}help updates`
 Use this if you think a command isn't working the same way it did last time you used it.
@@ -94,26 +105,27 @@ Number of servers this bot is in now: {len(self.bot.guilds)}
             if subsection is None:
                 em.description = f"""
 **Commands**
-Type `{BOT_PREFIX}help commands <command>`, where `command` is one of the following:
+Type `{BOT_PREFIX}help commands <command>`, where `command` is one of the following;
+By each is the permission required to use it:
 ```
-Directory -- Control the directory setup
-    setup             - You require the "Manage Server" and "M/Channels" permissions.
-    teardown          - You require the "Manage Server" and "M/Channels" permissions.
+Directory management -- Control the directory setup
+    setup           - "M/Server" and "M/Channels"
+    teardown        - "M/Server" and "M/Channels"
 
-Channels -- Manage channels in the directory
-    create_channel    - You require the "Manage Channels" permission.
-    create_category   - You require the "Manage Channels" permission.
-    delete_category   - You require the "Manage Channels" permission.
-    rename_channel    - You require the "Manage Channels" permission.
-    move_channel      - You require the "Manage Channels" permission.
-    import_channel    - You require the "Manage Channels" permission.
-    hide_channel      - You require the "Manage Channels" permission.
-    save_directory    - No Limits
-    update            - You require the "Manage Channels" permission.
+Channel Management -- Manage channels in the directory
+    create_channel  - "M/Channels"
+    create_category - "M/Channels"
+    delete_category - "M/Channels"
+    rename_channel  - "M/Channels"
+    move_channel    - "M/Channels"
+    import_channel  - "M/Channels"
+    hide_channel    - "M/Channels"
+    update          - "M/Channels"
+    save_directory  - No Limits
 
 General -- General commands
-    help              - No Limits
-    invite            - No Limits
+    help   - No Limits
+    invite - No Limits
 ```
 """
             elif subsection.lower() == "setup":

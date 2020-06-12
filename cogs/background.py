@@ -53,8 +53,6 @@ class BackgroundTasks(Cog):
 
         if self.bot.debug_mode:
             activity = Activity(type=ActivityType.playing, name="in DEBUG MODE")
-        elif self.bot.univ.DisableSaving:
-            activity = Activity(type=ActivityType.playing, name=f"with SAVING DISABLED")
         else:
             activity = Activity(
                 type=ActivityType.watching,
@@ -75,52 +73,32 @@ class BackgroundTasks(Cog):
             minute = "0" + minute
         time = f"{hour}:{minute}, {date}"
 
-        if not (exists(join(getcwd(), "Serialized", "data.pkl")) and
-                exists(join(getcwd(), "Serialized", "bot_config.pkl"))) and \
-                not self.bot.univ.DisableSaving:
+        print("Saving...", end="\r")
+        with open(join(getcwd(), "Serialized", "data.pkl"), "wb") as f:
+            data = {
+                "Directories": self.bot.univ.Directories
+            }
 
-            self.bot.univ.DisableSaving = True
-            print(
-                f"[{time} || Unable to save] data.pkl and/or bot_config.pkl not found. Replace file before "
-                f"shutting down. Saving disabled.")
+            try:
+                dump(data, f)
+            except Exception as e:
+                print(f"[{time} || Unable to save] Pickle dumping Error:", e)
 
-            return
+        with open(join(getcwd(), "Serialized", "bot_config.pkl"), "wb") as f:
+            config_data = {
+                "debug_mode": self.bot.debug_mode,
+                "auto_pull": self.bot.auto_pull,
+                "tz": self.bot.tz,
+                "prefix": self.bot.command_prefix
+            }
 
-        elif (exists(join(getcwd(), "Serialized", "data.pkl")) and
-              exists(join(getcwd(), "Serialized", "bot_config.pkl"))) and \
-                self.bot.univ.DisableSaving:
+            try:
+                dump(config_data, f)
+            except Exception as e:
+                print("[Unknown Error] Pickle dumping error:", e)
 
-            self.bot.univ.DisableSaving = False
-            print(f"[{time}] Saving re-enabled.")
-            return
-
-        if not self.bot.univ.DisableSaving:
-            print("Saving...", end="\r")
-            with open(join(getcwd(), "Serialized", "data.pkl"), "wb") as f:
-                data = {
-                    "Directories": self.bot.univ.Directories
-                }
-
-                try:
-                    dump(data, f)
-                except Exception as e:
-                    print(f"[{time} || Unable to save] Pickle dumping Error:", e)
-
-            with open(join(getcwd(), "Serialized", "bot_config.pkl"), "wb") as f:
-                config_data = {
-                    "debug_mode": self.bot.debug_mode,
-                    "auto_pull": self.bot.auto_pull,
-                    "tz": self.bot.tz,
-                    "prefix": self.bot.command_prefix
-                }
-
-                try:
-                    dump(config_data, f)
-                except Exception as e:
-                    print("[Unknown Error] Pickle dumping error:", e)
-
-            self.bot.univ.Inactive = self.bot.univ.Inactive + 1
-            print(f"[CDR: {time}] Saved data.", end="\n" if not self.bot.auto_pull else "\r")
+        self.bot.univ.Inactive = self.bot.univ.Inactive + 1
+        print(f"[CDR: {time}] Saved data.", end="\n" if not self.bot.auto_pull else "\r")
 
         if self.bot.auto_pull:
             print(f"[CDR: {time}] Saved data. Auto-pull: Checking git repository for changes...{' '*30}", end="\r")

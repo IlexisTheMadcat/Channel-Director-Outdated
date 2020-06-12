@@ -171,22 +171,19 @@ class Globals:
         self.Directories = {"guildID": {"catagoryID": 0, "channelID": 0, "msgID": 0, "tree": {}}}
         self.cwd = getcwd()
 
-        if not exists(f"{self.cwd}\\Serialized\\data.pkl"):
-            print("[Unable to load] data.pkl not found. Replace file before shutting down. Saving disabled.")
-            self.DisableSaving = True
+        if exists(f"{self.cwd}\\Serialized\\data.pkl"):
+            open(f"{self.cwd}\\Serialized\\data.pkl").close()
 
-        else:
-            self.DisableSaving = False
-            with open(f"{self.cwd}\\Serialized\\data.pkl", "rb") as f:
-                try:
-                    data = Unpickler(f).load()
-                    self.Directories = data["Directories"]
-                    print("#-------------------------------#\n"
-                          "[] Loaded data.pkl.\n"
-                          "#-------------------------------#\n")
-                except Exception as e:
-                    self.Directories = {"guildID": {"catagoryID": 0, "channelID": 0, "msgID": 0, "tree": {}}}
-                    print("[Data Reset] Unpickling Error:", e)
+        with open(f"{self.cwd}\\Serialized\\data.pkl", "rb") as f:
+            try:
+                data = Unpickler(f).load()
+                self.Directories = data["Directories"]
+                print("#-------------------------------#\n"
+                      "[] Loaded data.pkl.\n"
+                      "#-------------------------------#\n")
+            except Exception as e:
+                self.Directories = {"guildID": {"catagoryID": 0, "channelID": 0, "msgID": 0, "tree": {}}}
+                print("[Data Reset] Unpickling Error:", e)
 
 
 class Bot(DiscordBot):
@@ -245,25 +242,18 @@ class Bot(DiscordBot):
             minute = "0" + minute
         time = f"{hour}:{minute}, {date}"
 
-        if not exists(f"{self.cwd}\\Serialized\\data.pkl") and not self.univ.DisableSaving:
-            self.univ.DisableSaving = True
-            print(f"[Unable to save] data.pkl not found. Replace file before shutting down. Saving disabled.")
-            return
+        print("Saving...", end="\r")
+        with open(f"{self.cwd}\\Serialized\\data.pkl", "wb") as f:
+            try:
+                data = {
+                    "Directories": self.univ.Directories
+                }
 
-        if not self.univ.DisableSaving:
-            print("Saving...", end="\r")
-            with open(f"{self.cwd}\\Serialized\\data.pkl", "wb") as f:
-                try:
-                    data = {
-                        "Directories": self.univ.Directories
-                    }
+                dump(data, f)
+            except Exception as e:
+                print(f"[{time} || Unable to save] Pickle dumping Error:", e)
 
-                    dump(data, f)
-                except Exception as e:
-                    print(f"[{time} || Unable to save] Pickle dumping Error:", e)
-
-            self.univ.Inactive = self.univ.Inactive + 1
-            print(f"[CDR: {time}] Saved data.")
+        print(f"[CDR: {time}] Saved data and logging out...")
 
         for x_loop in self.univ.Loops:
             x_loop.cancel()
