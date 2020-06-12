@@ -1,7 +1,9 @@
-# https://discord.com/oauth2/authorize?client_id=698965636432265227&permissions=268479504&scope=bot
-
 # Lib
-from pickle import dump
+from contextlib import suppress
+from pickle import Unpickler
+from os import getcwd
+from os.path import join
+from random import choice
 
 # Site
 from discord import __version__
@@ -14,62 +16,100 @@ from discord.utils import oauth_url
 # Local
 from utils.classes import Bot
 
+print("...\n\n#-------------------------------#")
 
-debug_mode = input("Enter debug mode? (D=accept)\n---| ")
-if debug_mode == "D":
-    debug_mode = True
+print("Attempting to open bot_config.pkl...", end="\r")
 
-while True:
-    tz = input("Time Zone:\n---| ")
-    if tz in ["EST", "CST"]:
-        break
+with open(join(getcwd(), "Serialized", "bot_config.pkl"), "rb") as f:
+    try:
+        config_data = Unpickler(f).load()
+    except Exception as e:
+        print(f'[Using defaults] Unpickling error: {e}{" "*30}')
+        debug_mode = False
+        auto_pull = True
+        tz = "UTC"
+        prefix = "cdr:"
+    else:
+        try:
+            debug_mode = config_data["debug_mode"]
+            auto_pull = config_data["auto_pull"]
+            tz = config_data["tz"]
+            prefix = config_data["prefix"]
+            print(f"Loaded bot_config.pkl{' '*20}")
+        except KeyError:
+            print(f'[Using defaults] bot_config.pkl file improperly formatted.{" "*35}')  # print excess spaces to fully overwrite the '\r' above
+            debug_mode = False  # Print exceptions to stdout. Some errors will not be printed for some reason, such as NameError outside of commands.
+            auto_pull = True  # Auto pulls github updates every minute and reloads all loaded cogs.
+            tz = "UTC"  # Triggers python to get real UTC time for Rams's status.
+            prefix = ":>"
 
+print("#-------------------------------#\n")
+loading_choices = [  # because why not # TODO: Change loading_choices to suit Rem rather than Ram
+    "Loading Random Access Memory...",
+    '"It appears nothing here will fit except women\'s clothes."',
+    "Booting up the creative but stubbern mind...",
+    "Waking up the older sister...",
+    "Charging RAM...",
+    '"I was only waiting to help Roswaal-sama put on fresh clothes."',
+    '"By the way, do you have plans after this?"',
+    '"I see you really are studying, sir."',
+    '"No, thank you, sir."',
+    '"What can you do by learning anything now?!"',
+    '"I\'m not interested."',
+    "Requesting the one they call Ram..."
+]
 
-print("Loading...")
+print("#-------------------------------#")
+print(f"{choice(loading_choices)}")
+print(f"#-------------------------------#\n")
 
-
-BOT_PREFIX = "cdr:"
 INIT_EXTENSIONS = [
     "admin",
     "background",
     "directory_management",
     "events",
-    "help"
+    "help",
 ]
 
+# Extension "repl" must be loaded manually
+# as it is not automatically available
+# because it is not often needed.
 
 bot = Bot(
-    command_prefix=BOT_PREFIX,
-    description="CCreate a custom directory to better organize your channels.",
-    owner_id=331551368789622784,
+    description="Create a new channel system for your server.",
+    owner_ids=[331551368789622784, 125435062127820800],
+    activity=Activity(type=ActivityType.watching, name=f"Just woke up."),
+    status=Status.idle,
+    # Configurable via :>bot
+    command_prefix=prefix,
     debug_mode=debug_mode,
+    auto_pull=auto_pull,
     tz=tz
 )
 
 bot.remove_command("help")
 
-
+print("#-------------------------------#")
 print(f"Running in: {bot.cwd}")
 print(f"Discord API version: {__version__}")
+
+print("#-------------------------------#\n")
 
 
 @bot.event
 async def on_ready():
-
     app_info = await bot.application_info()
     bot.owner = bot.get_user(app_info.owner.id)
 
     permissions = Permissions()
     permissions.update(
-        manage_roles=True,
         manage_channels=True,
+        manage_roles=True,
         manage_messages=True,
         read_messages=True,
         send_messages=True,
         attach_files=True
     )
-
-    await bot.change_presence(status=Status.idle, activity=Activity(type=ActivityType.listening, name="Just woke up."))
 
     print(f"\n"
           f"#-------------------------------#\n"
@@ -77,11 +117,12 @@ async def on_ready():
           f"#-------------------------------#\n")
 
     for cog in INIT_EXTENSIONS:
-        print(f"| Loading initial cog {cog}")
+        print(f"| Loading initial cog {cog}", end="\r")
         try:
             bot.load_extension(f"cogs.{cog}")
         except Exception as e:
             print(f"| Failed to load extension {cog}\n|   {type(e).__name__}: {e}")
+        print("\n")
 
     print(f"#-------------------------------#\n"
           f"| Successfully logged in.\n"
@@ -97,18 +138,17 @@ async def on_ready():
 
 if __name__ == "__main__":
 
-    if not bot.auth.MWS_DBL_SUCCESS:
-        if bot.auth.MWS_DBL_TOKEN:
+    if not bot.auth["MWS_DBL_SUCCESS"]:
+        if bot.auth["MWS_DBL_TOKEN"]:
             confirm_new_dbl_token = input("Last DBL login failed or unknown. Enter new token? (Y/n): ")
             confirm_new_dbl_token = confirm_new_dbl_token.lower().startswith("y")
-
         else:
-            print("No DBL token stored.", end="")
+            print("No DBL token stored. ", end="")
             confirm_new_dbl_token = True
-            
+
         if confirm_new_dbl_token:
             new_bdl_token = input("Enter new DBL token:\n")
-            bot.auth.MWS_DBL_SUCCESS = new_bdl_token
+            bot.auth["MWS_DBL_SUCCESS"] = new_bdl_token
 
     print("Logging in with token.")
 
@@ -116,19 +156,20 @@ if __name__ == "__main__":
 
         try:
 
-            if not bot.auth.MWS_BOT_TOKEN:
+            if not bot.auth["MWS_BOT_TOKEN"]:
                 raise LoginFailure
 
-            bot.run()
+            with suppress(RuntimeError, RuntimeWarning):
+                bot.run()
 
         except LoginFailure:
             try:
-                bot.auth.MWS_BOT_TOKEN = None
+                bot.auth["MWS_BOT_TOKEN"] = None
 
                 print("\nLogin Failed: No token was provided or token provided was invalid.")
                 new_token = input("Provide new bot token: ")
 
-                bot.auth.MWS_BOT_TOKEN = new_token
+                bot.auth["MWS_BOT_TOKEN"] = new_token
 
             except KeyboardInterrupt:
                 print("\nLogin with new bot token cancelled. Aborting.")
@@ -136,28 +177,3 @@ if __name__ == "__main__":
 
         except KeyboardInterrupt:
             break
-
-""" Note: Channel names as keys are the name that the user gave, so they may rename it.
-{
-        "root" : {
-                "root-channelOne" : "ID",
-                "root-channelTwo" : "ID",
-                "level2" : {
-                        "root-level2-channelOne" : "ID",
-                        "root-level2-channelTwo" : "ID",
-                        "level3" : {
-                                "root-level2-level3-channelOne" : "ID",
-                                "root-level2-level3-channelTwo" : "ID",
-                                "level4" : {
-                                        "root-level2-level3-level4-channelOne" : "ID",
-                                        "root-level2-level3-level4-channelTwo" : "ID",
-                                        "level5" : {
-                                                "root-level2-level3-level4-level5-channelOne" : "ID",
-                                                "root-level2-level3-level4-level5-channelTwo" : "ID",
-                                        }   
-                                }   
-                        }
-                }  
-        }
-}
-"""

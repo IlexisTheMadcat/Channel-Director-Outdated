@@ -9,6 +9,7 @@ from copy import deepcopy
 # Site
 # from discord.abc import Messageable
 # from discord.channel import TextChannel
+from discord import AppInfo, Permissions
 from discord.embeds import Embed
 from discord.ext.commands.cog import Cog
 from discord.ext.commands.context import Context
@@ -21,10 +22,9 @@ from discord.ext.commands.errors import (
     ExtensionNotLoaded,
     NoEntryPointError
 )
-# from discord.permissions import Permissions
-# from discord.utils import oauth_url
 
 # Local
+
 from utils.classes import Bot  # , GlobalTextChannelConverter
 
 
@@ -34,15 +34,6 @@ class Admin(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.say_dest = None
-
-    @staticmethod
-    def color(ctx: Context):
-        """Color for embeds"""
-
-        if ctx.guild:
-            return ctx.guild.me.color
-        else:
-            return None
 
     """ ######################
          Managing Bot Modules
@@ -255,23 +246,6 @@ class Admin(Cog):
          General Use Commands
         ###################### """
 
-    # @is_owner()  # TODO: My invite command if you wanted to re-use it
-    # @command(name='invite')
-    # async def invite(self, ctx: Context):
-    #     """Sends an OAuth bot invite URL"""
-    #
-    #     app_info: AppInfo = await self.bot.application_info()
-    #     permissions = Permissions(536881152)
-    #
-    #     em = Embed(
-    #         title=f'OAuth URL for {self.bot.user.name}',
-    #         description=f'[Click Here]'
-    #                     f'({oauth_url(app_info.id, permissions)}) '
-    #                     f'to invite {self.bot.user.name} to your guild.',
-    #         color=self.color(ctx)
-    #     )
-    #     await ctx.send(embed=em)
-
     # @is_owner()
     # @group(name="say", invoke_without_command=True)
     # async def say(self, ctx: Context, *, msg: str = ""):
@@ -359,7 +333,9 @@ class Admin(Cog):
 
     @is_owner()
     @command(name="config", aliases=["bot"])
-    async def settings(self, ctx, option=None, new_value=None):
+
+    async def settings(self, ctx, option = None, new_value = None):
+
         """Manage Bot settings"""
         em = Embed(title="Administration: Config", description="Description not set.", color=0x000000)
         if option:
@@ -433,11 +409,15 @@ class Admin(Cog):
                 em.color = 0x000000
 
         if not option:
-            em.description = f"The options and values are listed below:\n```debug_mode: {self.bot.debug_mode}\nauto_pull: {self.bot.auto_pull}\ntz: {self.bot.tz}\n```"
+            em.description = f"The options and values are listed below:\n" \
+                             f"```debug_mode: {self.bot.debug_mode}\n" \
+                             f"auto_pull: {self.bot.auto_pull}\n" \
+                             f"tz: {self.bot.tz}\n" \
+                             f"prefix: {self.bot.command_prefix}```"
             em.color = 0x0000FF
 
         await ctx.send(embed=em)
-
+            
     @command(name="logout")
     @is_owner()
     async def blogout(self, ctx: Context):
@@ -451,7 +431,8 @@ class Admin(Cog):
         with open(join(self.bot.cwd, "Serialized", "data.pkl"), "wb") as f:
             try:
                 data = {
-                    "directories": self.bot.univ.Directories
+                    "Directories": self.bot.univ.Directories
+
                 }
 
                 dump(data, f)
