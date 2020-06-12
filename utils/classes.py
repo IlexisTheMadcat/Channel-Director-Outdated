@@ -26,6 +26,7 @@ from utils.fileinterface import PickleInterface
 
 class Paginator:
 
+
     def __init__(
             self,
             page_limit: int = 1000,
@@ -395,9 +396,8 @@ You are free to move this channel, but it's best to leave on top.
                     self.univ.LoadingUpdate[ctx.guild.id] = True
                     for ik, iv in self.univ.Directories[ctx.guild.id]["tree"]["root"].items():
                         if isinstance(iv, int):
-                            try:
-                                channel = self.get_channel(iv)
-                            except NotFound:
+                            channel = self.get_channel(iv)
+                            if channel is None:
                                 self.univ.Directories[ctx.guild.id]["tree"]["root"].pop(ik)
                                 return False
                             else:
@@ -407,9 +407,8 @@ You are free to move this channel, but it's best to leave on top.
                             message_lines.append(f"**ーー Category: [** {ik} **]**")
                             for xk, xv in self.univ.Directories[ctx.guild.id]["tree"]["root"][ik].items():
                                 if isinstance(xv, int):
-                                    try:
-                                        channel = self.get_channel(xv)
-                                    except NotFound:
+                                    channel = self.get_channel(xv)
+                                    if channel is None:
                                         self.univ.Directories[ctx.guild.id]["tree"]["root"][ik].pop(xk)
                                         return False
                                     else:
@@ -419,9 +418,8 @@ You are free to move this channel, but it's best to leave on top.
                                     message_lines.append(f"**ーーーー Category: [** {xk} **]**")
                                     for yk, yv in self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk].items():
                                         if isinstance(yv, int):
-                                            try:
-                                                channel = self.get_channel(yv)
-                                            except NotFound:
+                                            channel = self.get_channel(yv)
+                                            if channel is None:
                                                 self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk].pop(yk)
                                                 return False
                                             else:
@@ -429,28 +427,22 @@ You are free to move this channel, but it's best to leave on top.
 
                                         elif isinstance(yv, dict):
                                             message_lines.append(f"**ーーーーーー Category: [** {yk} **]**")
-                                            for zk, zv in \
-                                            self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][yk].items():
+                                            for zk, zv in self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][yk].items():
                                                 if isinstance(zv, int):
-                                                    try:
-                                                        channel = self.get_channel(zv)
-                                                    except NotFound:
-                                                        self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][
-                                                            yk].pop(zk)
+                                                    channel = self.get_channel(zv)
+                                                    if channel is None:
+                                                        self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][yk].pop(zk)
                                                         return False
                                                     else:
                                                         message_lines.append(f"**ーーーーーーーー [** {zk} **>>>** ||{channel.mention}||")
 
                                                 elif isinstance(zv, dict):
                                                     message_lines.append(f"**ーーーーーーーー Category: [** {zk} **]**")
-                                                    for ak, av in \
-                                                    self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][yk][zk].items():
+                                                    for ak, av in self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][yk][zk].items():
                                                         if isinstance(av, int):
-                                                            try:
-                                                                channel = self.get_channel(av)
-                                                            except NotFound:
-                                                                self.univ.Directories[ctx.guild.id]["tree"]["root"][
-                                                                    ik][xk][yk][zk].pop(ak)
+                                                            channel = self.get_channel(av)
+                                                            if channel is None:
+                                                                self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][yk][zk].pop(ak)
                                                                 return False
                                                             else:
                                                                 message_lines.append(f"**ーーーーーーーーーー [** {ak} **>>>** ||{channel.mention}||")

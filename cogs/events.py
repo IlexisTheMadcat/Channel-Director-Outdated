@@ -23,10 +23,6 @@ class Events(Cog):
         self.bot = bot
 
     @Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-        pass
-
-    @Cog.listener()
     async def on_guild_channel_delete(self, channel):
         if isinstance(channel, CategoryChannel):
             try:
