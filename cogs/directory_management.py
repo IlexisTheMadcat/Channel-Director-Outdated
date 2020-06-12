@@ -106,11 +106,11 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                         
                         await msg.edit(content="Setting up with attached file...")
 
-                        file = await file.save(f"{self.bot.cwd}\\Workspace\\incoming.pkl")
-                        with open(f"{self.bot.cwd}\\Workspace\\incoming.pkl", "rb") as f: 
+                        file = await file.save(f"{self.bot.cwd}/Workspace/incoming.pkl")
+                        with open(f"{self.bot.cwd}/Workspace/incoming.pkl", "rb") as f:
                             tree = Unpickler(f).load()  # WARNING: USERS CAN UPLOAD MALICIOUS .PKLs MAKING THIS INSECURE.
 
-                        os.remove(f"{self.bot.cwd}\\Workspace\\incoming.pkl")
+                        os.remove(f"{self.bot.cwd}/Workspace/incoming.pkl")
 
                         cat = await ctx.guild.create_category("CDR: Directories (Bot Managed)")
                         directory = await cat.create_text_channel("directory", topic="Managers: Leave this channel on top for easy access. Also do not delete it.")
@@ -963,15 +963,15 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
 
             await self.bot.update_directory(ctx=ctx, note=f"Updated to create download file requested by {ctx.user}.")
             try:
-                open(f"{self.bot.cwd}\\Workspace\\cdr_directory.pkl", "x").close()
+                open(f"{self.bot.cwd}/Workspace/cdr_directory.pkl", "x").close()
             except FileExistsError: 
                 pass
 
-            with open(f"{self.bot.cwd}\\Workspace\\cdr_directory.pkl", "wb+") as f: 
+            with open(f"{self.bot.cwd}/Workspace/cdr_directory.pkl", "wb+") as f:
                 data = await self.bot.convert_to_readable(ctx=ctx)
                 dump(data, f)
             
-            file = File(f"{self.bot.cwd}\\Workspace\\cdr_directory.pkl")
+            file = File(f"{self.bot.cwd}/Workspace/cdr_directory.pkl")
             await ctx.send(f"This file contains pickled data using Python. Use the command `{self.bot.command_prefix}setup` and attach the file to load it.", file=file)
             print(f"|| Sent file data from directory to server \"{ctx.guild.name}\".")
         else: 
