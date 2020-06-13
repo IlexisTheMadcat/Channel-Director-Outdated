@@ -2,7 +2,7 @@
 from contextlib import suppress
 from pickle import Unpickler
 from os import getcwd
-from os.path import join
+from os.path import join, exists
 from random import choice
 
 # Site
@@ -19,6 +19,9 @@ from utils.classes import Bot
 print("...\n\n#-------------------------------#")
 
 print("Attempting to open bot_config.pkl...", end="\r")
+
+if not exists(join(getcwd(), "Serialized", "bot_config.pkl")):
+    open(join(getcwd(), "Serialized", "bot_config.pkl"), "wb").close()
 
 with open(join(getcwd(), "Serialized", "bot_config.pkl"), "rb") as f:
     try:
@@ -41,7 +44,7 @@ with open(join(getcwd(), "Serialized", "bot_config.pkl"), "rb") as f:
             debug_mode = False  # Print exceptions to stdout. Some errors will not be printed for some reason, such as NameError outside of commands.
             auto_pull = True  # Auto pulls github updates every minute and reloads all loaded cogs.
             tz = "UTC"  # Triggers python to get real UTC time for Rems's status.
-            prefix = ":>"
+            prefix = "cdr:"
 
 print("#-------------------------------#\n")
 loading_choices = [  # because why not # TODO: Change loading_choices to suit Rem rather than Ram
