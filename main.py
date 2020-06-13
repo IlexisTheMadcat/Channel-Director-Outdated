@@ -155,11 +155,11 @@ if __name__ == "__main__":
                 bot.run()
 
         except LoginFailure:
-            try:
-                bot.auth["MWS_BOT_TOKEN"] = None
 
-                print("\nLogin Failed: No token was provided or token provided was invalid.")
-                break
+            bot.auth["MWS_BOT_TOKEN"] = None
+
+            print("\nLogin Failed: No token was provided or token provided was invalid.")
+            break
 
         except KeyboardInterrupt:
             break
