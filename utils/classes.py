@@ -211,9 +211,9 @@ class Bot(DiscordBot):
     def run(self, *args, **kwargs):
         super().run(self.auth["MWS_BOT_TOKEN"], *args, **kwargs)
 
-    def connect_dbl(self, autopost: bool = None):
-
-        print("Connecting DBL with token.")
+    def connect_dbl(self, autopost: bool = True):
+        print("#------------ DBL --------------#\n"
+              "| Connecting DBL with token.")
         try:
             if not self.auth["MWS_DBL_TOKEN"]:
                 raise DBLException
@@ -221,8 +221,10 @@ class Bot(DiscordBot):
 
         except DBLException:
             self.auth["MWS_DBL_TOKEN"] = None
-            print("\nDBL Login Failed: No token was provided or token provided was invalid.")
+            print("| DBL Login Failed: No token was provided or token provided was invalid.")
             dbl = None
+
+        print("#-------------------------------#")
 
         if dbl:
             self.auth["MWS_DBL_SUCCESS"] = True
@@ -262,7 +264,7 @@ class Bot(DiscordBot):
             await super().logout()
 
     async def convert_to_readable(self, ctx):  # It is advised to use update_directory(ctx) first. 'ctx' must meet the requirements for getting .guild and its directory.
-        await self.bot.update_directory(ctx=ctx, note=f"Updated to create download file.")
+        await self.update_directory(ctx=ctx, note=f"Updated to create download file.")
         directory = deepcopy(self.univ.Directories[ctx.guild.id]["tree"])
 
         if isinstance(directory, dict):
@@ -339,7 +341,8 @@ class Bot(DiscordBot):
             self.univ.LoadingUpdate.update({ctx.guild.id: False})
             raise TypeError("Invalid dictionary passed.")
 
-    async def update_directory(self, ctx, note=""):  # ctx must meet the requirements for accessing .guild and a Messagable.
+    async def update_directory(self, ctx, note="..."):
+        # ctx must meet the requirements for accessing .guild and a Messagable.
         self.univ.LoadingUpdate.update({ctx.guild.id: True})
         try:
             dchannel = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
