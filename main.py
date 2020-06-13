@@ -40,7 +40,7 @@ with open(join(getcwd(), "Serialized", "bot_config.pkl"), "rb") as f:
             print(f'[Using defaults] bot_config.pkl file improperly formatted.{" "*35}')  # print excess spaces to fully overwrite the '\r' above
             debug_mode = False  # Print exceptions to stdout. Some errors will not be printed for some reason, such as NameError outside of commands.
             auto_pull = True  # Auto pulls github updates every minute and reloads all loaded cogs.
-            tz = "UTC"  # Triggers python to get real UTC time for Rams's status.
+            tz = "UTC"  # Triggers python to get real UTC time for Rems's status.
             prefix = ":>"
 
 print("#-------------------------------#\n")
@@ -140,15 +140,7 @@ if __name__ == "__main__":
 
     if not bot.auth["MWS_DBL_SUCCESS"]:
         if bot.auth["MWS_DBL_TOKEN"]:
-            confirm_new_dbl_token = input("Last DBL login failed or unknown. Enter new token? (Y/n): ")
-            confirm_new_dbl_token = confirm_new_dbl_token.lower().startswith("y")
-        else:
-            print("No DBL token stored. ", end="")
-            confirm_new_dbl_token = True
-
-        if confirm_new_dbl_token:
-            new_bdl_token = input("Enter new DBL token:\n")
-            bot.auth["MWS_DBL_SUCCESS"] = new_bdl_token
+            print("Last DBL login failed or unknown.")
 
     print("Logging in with token.")
 
@@ -167,12 +159,6 @@ if __name__ == "__main__":
                 bot.auth["MWS_BOT_TOKEN"] = None
 
                 print("\nLogin Failed: No token was provided or token provided was invalid.")
-                new_token = input("Provide new bot token: ")
-
-                bot.auth["MWS_BOT_TOKEN"] = new_token
-
-            except KeyboardInterrupt:
-                print("\nLogin with new bot token cancelled. Aborting.")
                 break
 
         except KeyboardInterrupt:
