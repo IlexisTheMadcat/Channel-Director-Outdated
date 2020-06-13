@@ -964,15 +964,16 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
             await self.bot.update_directory(ctx=ctx, note=f"Updated to create download file requested by {ctx.author}.")
             try:
                 open(f"{self.bot.cwd}/Workspace/cdr_directory.pkl", "x").close()
-            except FileExistsError: 
+            except FileExistsError:
                 pass
 
             with open(f"{self.bot.cwd}/Workspace/cdr_directory.pkl", "wb+") as f:
                 data = await self.bot.convert_to_readable(ctx=ctx)
                 dump(data, f)
-            
+
             file = File(f"{self.bot.cwd}/Workspace/cdr_directory.pkl")
-            await ctx.send(f"This file contains pickled data using Python. Use the command `{self.bot.command_prefix}setup` and attach the file to load it.", file=file)
+            await ctx.send(f"This file contains pickled data using Python. "
+                           f"Use the command `{self.bot.command_prefix}setup` and attach the file to load it.", file=file)
             print(f"|| Sent file data from directory to server \"{ctx.guild.name}\".")
         else: 
             await ctx.send(f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
