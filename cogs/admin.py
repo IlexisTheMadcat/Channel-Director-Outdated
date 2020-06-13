@@ -394,15 +394,16 @@ class Admin(Cog):
                     em.color = 0x0000FF
 
             elif option == "prefix":
-                original = deepcopy(self.bot.command_prefix)
-                self.bot.command_prefix = new_value
+                if new_value:
+                    original = deepcopy(self.bot.command_prefix)
+                    self.bot.command_prefix = new_value
 
-                em.description = f"{ctx.author.mention} updated \"{option}\" to \"{new_value}\".\n`Original value: {original}`"
-                em.color = 0x00FF00
+                    em.description = f"{ctx.author.mention} updated \"{option}\" to \"{new_value}\".\n`Original value: {original}`"
+                    em.color = 0x00FF00
 
-            elif not new_value:
-                em.description = f"The current value for {option} is:\n`{self.bot.command_prefix}`"
-                em.color = 0x0000FF
+                if not new_value:
+                    em.description = f"The current value for {option} is:\n`{self.bot.command_prefix}`"
+                    em.color = 0x0000FF
 
             else:
                 em.description = f"Bot configuration option not found."
