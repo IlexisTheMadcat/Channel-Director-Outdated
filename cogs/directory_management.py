@@ -961,7 +961,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                 await ctx.message.delete()
                 await ctx.send("You cannot use that command here.", delete_after=5)
 
-            await self.bot.update_directory(ctx=ctx, note=f"Updated to create download file requested by {ctx.user}.")
+            await self.bot.update_directory(ctx=ctx, note=f"Updated to create download file requested by {ctx.author}.")
             try:
                 open(f"{self.bot.cwd}/Workspace/cdr_directory.pkl", "x").close()
             except FileExistsError: 
