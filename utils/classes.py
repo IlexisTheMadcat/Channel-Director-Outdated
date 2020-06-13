@@ -265,7 +265,7 @@ class Bot(DiscordBot):
         directory = deepcopy(self.univ.Directories[ctx.guild.id]["tree"])
 
         while True:
-            if ctx.guild.id in self.univ.LoadingUpdate:
+            if ctx.guild.id in self.univ.LoadingUpdate and self.univ.LoadingUpdate[ctx.guild.id]:
                 await sleep(1)
             else:
                 break
