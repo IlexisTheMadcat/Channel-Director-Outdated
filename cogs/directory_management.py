@@ -962,18 +962,15 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                 await ctx.send("You cannot use that command here.", delete_after=5)
 
             await self.bot.update_directory(ctx=ctx, note=f"Updated to create download file requested by {ctx.author}.")
-            print("Updated... 1")
             try:
                 open(f"{self.bot.cwd}/Workspace/cdr_directory.pkl", "x").close()
             except FileExistsError:
                 pass
 
-            print("Updated... 2")
             with open(f"{self.bot.cwd}/Workspace/cdr_directory.pkl", "wb+") as f:
                 data = await self.bot.convert_to_readable(ctx=ctx)
                 dump(data, f)
 
-            print("Updated... 3")
             file = File(f"{self.bot.cwd}/Workspace/cdr_directory.pkl")
             await ctx.send(f"This file contains pickled data using Python. "
                            f"Use the command `{self.bot.command_prefix}setup` and attach the file to load it.", file=file)
