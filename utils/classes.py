@@ -262,13 +262,8 @@ class Bot(DiscordBot):
             await super().logout()
 
     async def convert_to_readable(self, ctx):  # It is advised to use update_directory(ctx) first. 'ctx' must meet the requirements for getting .guild and its directory.
+        await self.bot.update_directory(ctx=ctx, note=f"Updated to create download file.")
         directory = deepcopy(self.univ.Directories[ctx.guild.id]["tree"])
-
-        while True:
-            if ctx.guild.id in self.univ.LoadingUpdate and self.univ.LoadingUpdate[ctx.guild.id]:
-                await sleep(1)
-            else:
-                break
 
         if isinstance(directory, dict):
             for ik, iv in directory["root"].items():
