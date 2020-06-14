@@ -397,9 +397,10 @@ class Bot(DiscordBot):
                             if not ret:
                                 return False
 
-                        d = {k: d[k] for k in sorted(d, key=lambda k: isinstance(d[k], dict))}
-
                     return True
+
+                d = self.univ.Directories[ctx.guild.id]["tree"]["root"]
+                d = {k: d[k] for k in sorted(d, key=lambda k: isinstance(d[k], dict))}
 
                 while True:
                     chan_directory = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
