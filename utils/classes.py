@@ -376,6 +376,7 @@ class Bot(DiscordBot):
                     """Recursively walk bot.Directories for guild and generate
                     a list of strings representing the directory message"""
 
+                    d = {k: d[k] for k in sorted(d, key=lambda k: isinstance(d[k], dict))}
                     lines.append(category)
 
                     for key, val in d.items():
@@ -399,8 +400,7 @@ class Bot(DiscordBot):
 
                     return True
 
-                d = self.univ.Directories[ctx.guild.id]["tree"]["root"]
-                d = {k: d[k] for k in sorted(d, key=lambda k: isinstance(d[k], dict))}
+
 
                 while True:
                     chan_directory = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
