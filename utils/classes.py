@@ -264,7 +264,7 @@ class Bot(DiscordBot):
 
     # It is advised to use update_directory(ctx) first.
     # 'ctx' must meet the requirements for getting .guild and its directory.
-    def convert_to_readable(self, ctx: Context):
+    async def convert_to_readable(self, ctx: Context):
         """Replaces all channel IDs `int` with `None`"""
 
         await self.update_directory(ctx=ctx, note=f"Updated to create download file.")
@@ -407,7 +407,7 @@ class Bot(DiscordBot):
 
                     message_lines = list()
 
-                    result = recurse_read(self, self.univ.Directories[ctx.guild.id]["tree"]["root"], list())
+                    result = recurse_read(self, self.univ.Directories[ctx.guild.id]["tree"]["root"], message_lines)
 
                     if result is False:
                         continue
