@@ -53,9 +53,7 @@ class Events(Cog):
             except KeyError or NotFound:
                 pass
 
-        if channel.guild.id in self.bot.univ.LoadingUpdate.keys() and channel.guild.id not in self.bot.univ.TearingDown:
-            if not self.bot.univ.LoadingUpdate[channel.guild.id]:
-                self.bot.univ.LoadingUpdate[channel.guild.id] = True
+        if channel.guild.id not in self.bot.univ.LoadingUpdate and channel.guild.id not in self.bot.univ.TearingDown:
                 try:
                     dchannel = await self.bot.fetch_channel(self.bot.univ.Directories[channel.guild.id]["channelID"])
                 except NotFound:
@@ -63,7 +61,7 @@ class Events(Cog):
                 else:
                     async with dchannel.typing():
                         await self.bot.update_directory(channel, note="Updated automatically following channel deletion by user.")
-                    self.bot.univ.LoadingUpdate[channel.guild.id] = False
+                    self.bot.univ.LoadingUpdate.remove(channel.guild.id)
 
     @Cog.listener()
     async def on_message(self, msg):
@@ -103,7 +101,7 @@ class Events(Cog):
                 await ctx.message.delete()
                 await msg.author.send(
                     f"This bot is missing one or more permissions listed in "
-                    f"`{self.bot.command_prefix}permissions`."
+                    f"`{self.bot.command_prefix}help` under `Required Permissions."
                 )
                 return
 

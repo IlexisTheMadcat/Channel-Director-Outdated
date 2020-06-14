@@ -42,6 +42,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
 """)
             await msg.add_reaction("✅")
             await msg.add_reaction("❎")
+            await msg.add_reaction("🔄")
 
         else:
             msg = await ctx.send("""
@@ -55,7 +56,10 @@ The entire process is handled by me so, mind your manners, please.
             await msg.add_reaction("❎")
 
         def check(reaction, user):
-            return str(reaction.emoji) in ["✅", "❎"] and user == ctx.author and reaction.message.id == msg.id
+            emj = ["✅", "❎"]
+            if ctx.guild.id in self.bot.univ.Directories.keys():
+                emj.append("🔄")
+            return str(reaction.emoji) in emj and user == ctx.author and reaction.message.id == msg.id
 
         try:
             reaction, user = await self.bot.wait_for("reaction_add", timeout=30, check=check)
@@ -76,11 +80,42 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                     await msg.edit(content="Okay, I canceled the operation.")
                     return
 
-                await msg.edit(content="""
+                elif str(reaction.emoji) == "✅":
+                    await msg.edit(content="""
 You already have a directory tree set up. Continue anyway?
 Note: Your old channels will not be deleted, but the old directory channel will not be kept updated or managed anymore.
 `[✅] (=================)`
 """)
+
+                elif str(reaction.emoji) == "🔄":
+                    await msg.edit(content="""
+You already have a directory tree set up. Continue anyway?
+Note: Your old channels will not be deleted, but the old directory channel will not be kept updated or managed anymore.
+`[🔄] (=================)`
+""")
+                    await msg.clear_reactions()
+                    await sleep(2)
+                    await msg.edit(content="Tearing down...")
+                    self.bot.univ.TearingDown.append(ctx.guild.id)
+                    try:
+                        category = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
+                    except NotFound:
+                        await msg.edit(content="I couldn't find the category for the channels.")
+                        await sleep(2)
+                        self.bot.univ.Directories.pop(ctx.guild.id)
+                        self.bot.univ.TearingDown.remove(ctx.guild.id)
+
+                    else:
+                        for i in category.channels:
+                            await i.delete()
+
+                        await category.delete()
+
+                        self.bot.univ.Directories.pop(ctx.guild.id)
+                        self.bot.univ.TearingDown.remove(ctx.guild.id)
+                        await msg.edit(content="Teardown complete.")
+                        await sleep(2)
+
             else:
                 if str(reaction.emoji) == "❎":
                     await msg.edit(content="""
@@ -94,14 +129,15 @@ The entire process is handled by me so, mind your manners, please.
                     await sleep(2)
                     await msg.edit(content="Okay, I canceled the operation.")
                     return
-
-                await msg.edit(content="""
+                elif str(reaction.emoji) == "✅":
+                    await msg.edit(content="""
 This setup will create a new category that you can edit, **but you should never delete it**.
 The category is used by the bot to identify it as a storage system for the channels.
 
 The entire process is handled by me so, mind your manners, please.
 `[✅] (=================)`
 """)
+            await msg.clear_reactions()
             await sleep(2)
             if ctx.guild.id in self.bot.univ.Directories.keys():
                 self.bot.univ.Directories.pop(ctx.guild.id)
@@ -119,7 +155,8 @@ You've attached a valid file to your message.
 Do you want to attempt to load it?
 `[  ] (within 10 seconds)`
 """)
-
+                    await msg.add_reaction("✅")
+                    await msg.add_reaction("❎")
                     def check(reaction, user):
                         return str(reaction.emoji) in ["✅", "❎"] and user.id == ctx.author.id and reaction.message.id == msg.id
 
@@ -374,11 +411,10 @@ Confirm: You are deleting an external category.
         if ctx.guild.id in self.bot.univ.Directories.keys():
             if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                 await ctx.message.delete()
-                if ctx.guild.id in self.bot.univ.LoadingUpdate.keys():
-                    if self.bot.univ.LoadingUpdate[ctx.guild.id]:
-                        await ctx.send("The directory is being updated at the moment. Try again in a few seconds.",
-                                       delete_after=10)
-                        return
+                if ctx.guild.id in self.bot.univ.LoadingUpdate:
+                    await ctx.send("The directory is being updated at the moment. Try again in a few seconds.",
+                                   delete_after=10)
+                    return
 
                 if len(name) > 50:
                     await ctx.send("\"name\" cannot be greater than 50 characters long.", delete_after=5)
@@ -440,10 +476,9 @@ Confirm: You are deleting an external category.
         if ctx.guild.id in self.bot.univ.Directories.keys():
             if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                 await ctx.message.delete()
-                if ctx.guild.id in self.bot.univ.LoadingUpdate.keys():
-                    if self.bot.univ.LoadingUpdate[ctx.guild.id]:
-                        await ctx.send("The directory is being updated at the moment. Try again in a few seconds.", delete_after=10)
-                        return
+                if ctx.guild.id in self.bot.univ.LoadingUpdate:
+                    await ctx.send("The directory is being updated at the moment. Try again in a few seconds.", delete_after=10)
+                    return
 
                 if len(name) > 50:
                     await ctx.send("\"name\" cannot be greater than 50.", delete_after=5)
@@ -498,13 +533,13 @@ Confirm: You are deleting an external category.
 
         await ctx.message.delete()
 
-        if self.bot.univ.LoadingUpdate.get(ctx.guild.id, None):
+        if ctx.guild.id in self.bot.univ.LoadingUpdate:
             return await ctx.send(
                 "The directory is being updated at the moment. Try again in a few seconds.",
                 delete_after=10
             )
 
-        self.bot.univ.LoadingUpdate[ctx.guild.id] = True
+        self.bot.univ.LoadingUpdate.append(ctx.guild.id)
 
         path = directory.split("//")
         get_item = recurse_index(self.bot.univ.Directories[ctx.guild.id]['tree'], path)
@@ -526,17 +561,17 @@ Confirm: You are deleting an external category.
                     await channel.delete()
 
             get_item.pop(name)
-            self.bot.univ.LoadingUpdate[ctx.guild.id] = False
+            self.bot.univ.LoadingUpdate.remove(ctx.guild.id)
 
         except TypeError:
-            self.bot.univ.LoadingUpdate[ctx.guild.id] = False
+            self.bot.univ.LoadingUpdate.remove(ctx.guild.id)
             return await ctx.send(
                 "That's a channel silly! If you need to, go to the channel and delete it yourself. "
                 "I currently cannot do that myself."
             )
 
         except KeyError as e:
-            self.bot.univ.LoadingUpdate[ctx.guild.id] = False
+            self.bot.univ.LoadingUpdate.remove(ctx.guild.id)
             return await ctx.send(f"That directory doesn't exist.\n`Invalid category name: {e}`", delete_after=5)
 
         else:
@@ -557,10 +592,9 @@ Confirm: You are deleting an external category.
         if ctx.guild.id in self.bot.univ.Directories.keys():
             if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                 await ctx.message.delete()
-                if ctx.guild.id in self.bot.univ.LoadingUpdate.keys():
-                    if self.bot.univ.LoadingUpdate[ctx.guild.id]:
-                        await ctx.send("The directory is being updated at the moment. Try again in a few seconds.", delete_after=10)
-                        return
+                if ctx.guild.id in self.bot.univ.LoadingUpdate:
+                    await ctx.send("The directory is being updated at the moment. Try again in a few seconds.", delete_after=10)
+                    return
 
                 d = directory.split("//")
 
@@ -602,11 +636,9 @@ Confirm: You are deleting an external category.
         if ctx.guild.id in self.bot.univ.Directories.keys():
             if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                 await ctx.message.delete()
-                if ctx.guild.id in self.bot.univ.LoadingUpdate.keys():
-                    if self.bot.univ.LoadingUpdate[ctx.guild.id]:
-                        await ctx.send("The directory is being updated at the moment. Try again in a few seconds.",
-                                       delete_after=10)
-                        return
+                if ctx.guild.id in self.bot.univ.LoadingUpdate:
+                    await ctx.send("The directory is being updated at the moment. Try again in a few seconds.", delete_after=10)
+                    return
 
                 d = directory.split("//")
                 D = new_directory.split("//")
