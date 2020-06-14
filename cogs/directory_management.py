@@ -55,7 +55,7 @@ The entire process is handled by me so, mind your manners, please.
             await msg.add_reaction("❎")
 
         def check(reaction, user):
-            return (str(reaction.emoji) == "✅" or "❎") and user == ctx.author and reaction.message.id == msg.id
+            return str(reaction.emoji) in ["✅", "❎"] and user == ctx.author and reaction.message.id == msg.id
 
         try:
             reaction, user = await self.bot.wait_for("reaction_add", timeout=30, check=check)
@@ -121,8 +121,7 @@ Do you want to attempt to load it?
 """)
 
                     def check(reaction, user):
-                        return (str(
-                            reaction.emoji) == "✅" or "❎") and user.id == ctx.author.id and reaction.message.id == msg.id
+                        return str(reaction.emoji) in ["✅", "❎"] and user.id == ctx.author.id and reaction.message.id == msg.id
 
                     try:
                         reaction, user = await self.bot.wait_for("reaction_add", timeout=10, check=check)
@@ -239,8 +238,7 @@ If you want to, you can save your directory first using the `save_directory` com
                 await msg.add_reaction("❎")
 
                 def check(reaction, user):
-                    return (str(
-                        reaction.emoji) == "✅" or "❎") and user.id == ctx.author.id and reaction.message.id == msg.id
+                    return str(reaction.emoji) in ["✅", "❎"] and user.id == ctx.author.id and reaction.message.id == msg.id
 
                 try:
                     reaction, user = await self.bot.wait_for("reaction_add", timeout=30, check=check)
@@ -318,7 +316,7 @@ Confirm: You are deleting an external category.
             await msg.add_reaction("❎")
 
             def check(reaction, user):
-                return str(reaction.emoji) == ("✅" or "❎") and user == ctx.author and reaction.message.id == msg.id
+                return str(reaction.emoji) in ["✅", "❎"] and user == ctx.author and reaction.message.id == msg.id
 
             try:
                 reaction, user = await self.bot.wait_for("reaction_add", timeout=10, check=check)
@@ -902,6 +900,11 @@ Confirm: You are deleting an external category.
 
         if ctx.guild.id in self.bot.univ.Directories.keys():
             await ctx.message.delete()
+            if self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]['channelID']) is None:
+                await ctx.send("You need to set up your directory again.")
+                self.bot.univ.Directories.pop(ctx.guild.id)
+                return
+
             await self.bot.update_directory(ctx=ctx, note="Update requested manually.")
         else:
             await ctx.send(
