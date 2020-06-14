@@ -198,7 +198,6 @@ class Bot(DiscordBot):
         self.auto_pull = kwargs.pop("auto_pull", True)
         self.debug_mode = kwargs.pop("debug_mode", False)
         self.tz = kwargs.pop("tz", "UTC")
-        self.command_prefix = kwargs.pop("command_prefix", "cdr:")
 
         # Attribute for accessing tokens from file
         self.auth = PickleInterface(f"{self.cwd}/Serialized/tokens.pkl")

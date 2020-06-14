@@ -24,7 +24,7 @@ class Commands(Cog):
         self.bot.remove_command("help")
 
     @command(name="setup", aliases=["su"])
-    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True, manage_roles=True)
+    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True, manage_roles=True, add_reactions=True)
     @has_permissions(manage_channels=True, manage_guild=True)
     async def setup_directory(self, ctx: Context):
         if not ctx.guild: 
@@ -32,48 +32,76 @@ class Commands(Cog):
             return
     
         if ctx.guild.id in self.bot.univ.Directories.keys(): 
-            msg = await ctx.send("You already have a directory tree set up. Continue anyway?\n"
-                                 "React with :white_check_mark: (within 30 seconds) to continue the setup.\n"
-                                 "`[  ]`")
+            msg = await ctx.send("""
+You already have a directory tree set up. Continue anyway?
+Note: Your old channels will not be deleted, but the old directory channel will not be kept updated or managed anymore.
+`[  ] (within 30 seconds)`
+""")
+            await msg.add_reaction("✅")
+            await msg.add_reaction("❎")
+
         else: 
             msg = await ctx.send("""
-This setup will create a new catagory that you can edit, but you should never delete it. This may mess me up big time!
+This setup will create a new category that you can edit, **but you should never delete it**.
 The category is used by the bot to identify it as a storage system for the channels.
 
 The entire process is handled by me so, mind your manners, please.
-React with :white_check_mark: (within 30 seconds) to continue the setup.
-`[  ]`
+`[  ] (within 30 seconds)`
 """)
+            await msg.add_reaction("✅")
+            await msg.add_reaction("❎")
 
         def check(reaction, user): 
-            return str(reaction.emoji) == "✅" and user == ctx.author and reaction.message.id == msg.id
+            return (str(reaction.emoji) == "✅" or "❎") and user == ctx.author and reaction.message.id == msg.id
         
         try: 
             reaction, user = await self.bot.wait_for("reaction_add", timeout=30, check=check)
         except TimeoutError: 
-            await msg.delete()
-        else: 
+            await msg.edit(content="You timed out, so I wont continue.")
+            await msg.clear_reactions()
+        else:
             await reaction.remove(user)
-            if ctx.guild.id in self.bot.univ.Directories.keys(): 
+            if ctx.guild.id in self.bot.univ.Directories.keys():
+                if str(reaction.emoji) == "❎":
+                    await msg.edit(content="""
+You already have a directory tree set up. Continue anyway?
+Note: Your old channels will not be deleted, but the old directory channel will not be kept updated or managed anymore.
+`[❎] (=================)`
+""")
+                    await msg.clear_reactions()
+                    await sleep(2)
+                    await msg.edit(content="Okay, I canceled the operation.")
+                    return
+
                 await msg.edit(content="""
 You already have a directory tree set up. Continue anyway?
-React with :white_check_mark: (within 30 seconds) to continue the setup.\n`[✅]`
+Note: Your old channels will not be deleted, but the old directory channel will not be kept updated or managed anymore.
+`[✅] (=================)`
 """)
-            else: 
-                await msg.edit(content="""
-This setup will create a new catagory that you can edit, but you should never delete it. This may mess me up big time!
+            else:
+                if str(reaction.emoji) == "❎":
+                    await msg.edit(content="""
+This setup will create a new category that you can edit, **but you should never delete it**.
 The category is used by the bot to identify it as a storage system for the channels.
 
 The entire process is handled by me so, mind your manners, please.
-React with :white_check_mark: (within 30 seconds) to continue the setup.
-`[✅]`
+`[❎] (=================)`
+""")
+                    await msg.clear_reactions()
+                    await sleep(2)
+                    await msg.edit(content="Okay, I canceled the operation.")
+                    return
+
+                await msg.edit(content="""
+This setup will create a new category that you can edit, **but you should never delete it**.
+The category is used by the bot to identify it as a storage system for the channels.
+
+The entire process is handled by me so, mind your manners, please.
+`[✅] (=================)`
 """)
             await sleep(2)
-            if ctx.guild.id in self.bot.univ.Directories.keys(): 
-                await msg.edit(content="Note: Your old channels will not be deleted, "
-                                       "but the old directory channel will not be kept updated or managed anymore.")
+            if ctx.guild.id in self.bot.univ.Directories.keys():
                 self.bot.univ.Directories.pop(ctx.guild.id)
-                await sleep(5)
 
             if ctx.guild.id not in self.bot.univ.Directories.keys(): 
                 if ctx.message.attachments: 
@@ -83,32 +111,48 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                             file = i
                             break
 
-                    await msg.edit(content="You've attached a valid file to your message. "
-                                           "Do you want to attempt to load it?\n"
-                                           "React with :white_check_mark: (within 10 seconds) to continue the setup.\n"
-                                           "`[  ]`")
+                    await msg.edit(content="""
+You've attached a valid file to your message.
+Do you want to attempt to load it?
+`[  ] (within 10 seconds)`
+""")
                     def check(reaction, user): 
-                        return str(reaction.emoji) == "✅" and user.id == ctx.author.id and reaction.message.id == msg.id
+                        return (str(reaction.emoji) == "✅" or "❎") and user.id == ctx.author.id and reaction.message.id == msg.id
                     
                     try: 
                         reaction, user = await self.bot.wait_for("reaction_add", timeout=10, check=check)
-                    except TimeoutError: 
-                        await msg.delete()
+                    except TimeoutError:
+                        await msg.clear_reactions()
+                        await msg.edit(content="You timed out, so I canceled the operation.")
                         return
                     else: 
-                        await reaction.remove(user)
-                        await msg.edit(content="You've attached a valid file to your message. "
-                                               "Do you want to attempt to load it?\n"
-                                               "React with :white_check_mark: (within 10 seconds) to continue the setup.\n"
-                                               "`[✅]`")
-                        await sleep(2)
+                        await msg.clear_reactions()
+                        if str(reaction.emoji) == "❎":
+                            await msg.edit(content="""
+You've attached a valid file to your message.
+Do you want to attempt to load it?
+`[❎] (=================)`
+""")
+                            await sleep(2)
+                            await msg.edit(content="Okay, I canceled the operation.")
+                            return
 
-                        
+                        await msg.edit(content="""
+You've attached a valid file to your message.
+Do you want to attempt to load it?
+`[✅] (=================)`
+""")
+
+                        await sleep(2)
                         await msg.edit(content="Setting up with attached file...")
 
                         file = await file.save(f"{self.bot.cwd}/Workspace/incoming.pkl")
                         with open(f"{self.bot.cwd}/Workspace/incoming.pkl", "rb") as f:
-                            tree = Unpickler(f).load()  # WARNING: USERS CAN UPLOAD MALICIOUS .PKLs MAKING THIS INSECURE.
+                            try:
+                                tree = Unpickler(f).load()  # WARNING: USERS CAN UPLOAD MALICIOUS .PKLs MAKING THIS INSECURE.
+                            except Exception as e:
+                                await msg.edit(content=f"The setup failed because the file is either changed, corrupted, or outdated.\n`Error description: {e}`")
+                                return
 
                         os.remove(f"{self.bot.cwd}/Workspace/incoming.pkl")
 
@@ -130,8 +174,9 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                             self.bot.univ.Directories.pop(ctx.guild.id)
                             for i in cat.channels:
                                 await i.delete()
+
                             await cat.delete()
-                            await msg.edit(content=f"The setup failed because the file is either changed, corrupted, or outdated.\n`Error description: {e}`")
+                            await msg.edit(content=f"The setup failed because the file does not contain valid data.\n`Error description: {e}`")
                             return
                         else: 
                             await self.bot.update_directory(ctx=ctx, note="Finished automated setup.")
@@ -140,7 +185,8 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                         
                         return
                 else:
-                    
+                    await msg.clear_reactions()
+
                     await msg.edit(content="Setting up now...")
                     cat = await ctx.guild.create_category("CDR: Directories (Bot Managed)")
                     directory = await cat.create_text_channel("directory", topic="Managers: Leave this channel on top for easy access. Also do not delete it.")
@@ -157,7 +203,7 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                     return
      
     @command(name="teardown", aliases=["td"])
-    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
+    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True, add_reactions=True)
     @has_permissions(manage_channels=True, manage_guild=True)
     async def teardown_directory(self, ctx: Context, categoryID: int = 0): 
         if ctx.guild is None: 
@@ -170,17 +216,41 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                     await ctx.send("You can't do that here!", delete_after=5)
                     return
 
-                msg = await ctx.send("Are you sure? React with :white_check_mark: (within 20 seconds) to continue.\nIf you want to, you can save your directory first using the `save_directory` command.\n`[  ]`")
+                msg = await ctx.send("""
+Are you sure? **This will delete EVERY channel under the managed category**, imported or not.
+If you want to, you can save your directory first using the `save_directory` command.
+`[  ] (within 30 seconds)`
+""")
+
+                await msg.add_reaction("✅")
+                await msg.add_reaction("❎")
+
                 def check(reaction, user): 
-                    return str(reaction.emoji) == "✅" and user.id == ctx.author.id and reaction.message.id == msg.id
+                    return (str(reaction.emoji) == "✅" or "❎") and user.id == ctx.author.id and reaction.message.id == msg.id
                 
                 try: 
-                    reaction, user = await self.bot.wait_for("reaction_add", timeout=10, check=check)
-                except TimeoutError: 
-                    await msg.delete()
-                else: 
-                    await reaction.remove(user)
-                    await msg.edit(content="Are you sure? React with :white_check_mark: (within 20 seconds) to continue.\nIf you want to, you can save your directory first using the `save_directory` command.\n`[✅]`")
+                    reaction, user = await self.bot.wait_for("reaction_add", timeout=30, check=check)
+                except TimeoutError:
+                    await msg.clear_reactions()
+                    await msg.edit(content="You timed out, so I wont continue.")
+                    return
+                else:
+                    await msg.clear_reactions()
+                    if str(reaction.emoji) == "❎":
+                        await msg.edit(content="""
+Are you sure? **This will delete EVERY channel under the managed category**, imported or not.
+If you want to, you can save your directory first using the `save_directory` command.
+`[❎] (=================)`
+""")
+                        await sleep(2)
+                        await msg.edit(content="Okay, I canceled the operation.")
+                        return
+
+                    await msg.edit(content="""
+Are you sure? **This will delete EVERY channel under the managed category**, imported or not.
+If you want to, you can save your directory first using the `save_directory` command.
+`[✅] (=================)`
+""")
                     await sleep(2)
                     await msg.edit(content="Tearing down...")
                     self.bot.univ.TearingDown.append(ctx.guild.id)
@@ -219,18 +289,42 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
                 if categoryID not in [guild.id for guild in ctx.guild.channels]:
                     await ctx.send("That category does exist, but it isn't in your server. Why would I let you do that? Spoiled prankster.")
                     return
-    
-            msg = await ctx.send("Are you sure? React with :white_check_mark: (within 20 seconds) to continue.\nConfirm: You are deleting an external category.\n`[  ]`")
-            def check(reaction, user): 
-                return str(reaction.emoji) == "✅" and user == ctx.author and reaction.message.id == msg.id
+
+            msg = await ctx.send("""
+Are you sure?
+Confirm: You are deleting an external category.
+`[  ] (within 10 seconds)`
+""")
+            await msg.add_reaction("✅")
+            await msg.add_reaction("❎")
+
+            def check(reaction, user):
+                return str(reaction.emoji) == ("✅" or "❎") and user == ctx.author and reaction.message.id == msg.id
             
             try: 
                 reaction, user = await self.bot.wait_for("reaction_add", timeout=10, check=check)
-            except TimeoutError: 
-                await msg.delete()
+            except TimeoutError:
+                await msg.clear_reactions()
+                await msg.edit(content="You timed out, so I wont continue.")
+                return
             else: 
-                await reaction.remove(user)
-                await msg.edit(content="Are you sure? React with :white_check_mark: (within 20 seconds) to continue.\nConfirm: You are deleting an external category.\n`[✅]`")
+                await msg.clear_reactions()
+                if str(reaction.emoji) == "❎":
+                    await msg.edit(
+                        content="""
+Are you sure?
+Confirm: You are deleting an external category.
+`[❎] (=================)`
+""")
+                    await sleep(2)
+                    await msg.edit(content="Okay, I canceled the operation.")
+                    return
+
+                await msg.edit(content="""
+Are you sure?
+Confirm: You are deleting an external category.
+`[✅] (=================)`
+""")
                 await sleep(2)
                 await msg.edit(content="Tearing down external category...")
                 self.bot.univ.TearingDown.append(ctx.guild.id)
@@ -468,7 +562,6 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
         else: 
             await ctx.send(f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
 
-     
     @commands.command(aliases=["del_cat"])
     @commands.bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
     @commands.has_permissions(manage_channels=True)
@@ -836,13 +929,13 @@ React with :white_check_mark: (within 30 seconds) to continue the setup.
 
                 try: 
                     if len(d) == 1: 
-                        if name not in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]].keys(): 
+                        if name not in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]].keys():
                             self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][name] = channel
-                        else: 
+                        else:
                             await ctx.send("The destination directory already has a channel or category with the same name.", delete_after=5)
                             return
 
-                    elif len(d) == 2: 
+                    elif len(d) == 2:
                         if name not in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]].keys(): 
                             self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][name] = channel
                         else: 
