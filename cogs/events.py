@@ -53,7 +53,7 @@ class Events(Cog):
             except KeyError or NotFound:
                 pass
 
-        if channel.guild.id in self.bot.univ.LoadingUpdate.keys():
+        if channel.guild.id in self.bot.univ.LoadingUpdate.keys() and channel.guild.id not in self.bot.univ.TearingDown:
             if not self.bot.univ.LoadingUpdate[channel.guild.id]:
                 self.bot.univ.LoadingUpdate[channel.guild.id] = True
                 try:
