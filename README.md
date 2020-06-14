@@ -80,9 +80,9 @@ Root Category:
 ------ [ Channel_3 >>> ||Channel mention link||
 ------ [ Name >>> ||Channel mention link||
 ```
-A Directory Example would be like this one:
-[![A Directory Example](https://media.discordapp.net/attachments/720081721181339790/721873378969124884/unknown.png?width=854&height=702)](about:blank)
-You can download this setup example here:
+A Directory Example would be like this one:\
+[![A Directory Example](https://media.discordapp.net/attachments/720081721181339790/721873378969124884/unknown.png?width=854&height=702)](about:blank)\
+You can download this setup example here:\
 [Download the template file](https://cdn.discordapp.com/attachments/655456170391109663/721873996668207144/cdr_directory.pkl)
 
 ### Directory Mangement
