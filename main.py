@@ -111,7 +111,8 @@ async def on_ready():
         manage_messages=True,
         read_messages=True,
         send_messages=True,
-        attach_files=True
+        attach_files=True,
+        add_reactions=True
     )
 
     print(f"\n"
