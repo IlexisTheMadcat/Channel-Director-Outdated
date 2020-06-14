@@ -293,7 +293,7 @@ If you want to, you can save your directory first using the `save_directory` com
             msg = await ctx.send("""
 Are you sure?
 Confirm: You are deleting an external category.
-`[  ] (=================)`
+`[  ] (within 10 seconds)`
 """)
             await msg.add_reaction("✅")
             await msg.add_reaction("❎")
