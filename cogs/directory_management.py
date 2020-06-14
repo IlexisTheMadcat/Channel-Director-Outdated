@@ -485,12 +485,12 @@ Confirm: You are deleting an external category.
         if not ctx.guild:
             return await ctx.send("This command cannot be used in a DM channel.")
 
-        if ctx.guild.id in self.bot.univ.Directories.keys():
+        if not ctx.guild.id in self.bot.univ.Directories.keys():
             return await ctx.send(
                 f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one."
             )
 
-        if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
+        if ctx.channel.id != self.bot.univ.Directories[ctx.guild.id]["channelID"]:
             return await ctx.send(
                 f"This command must be used in the directory channel created by the bot.\n"
                 f"Deleted it? Use the command `{self.bot.command_prefix}update`."
@@ -503,6 +503,8 @@ Confirm: You are deleting an external category.
                 "The directory is being updated at the moment. Try again in a few seconds.",
                 delete_after=10
             )
+
+        self.bot.univ.LoadingUpdate[ctx.guild.id] = True
 
         path = directory.split("//")
         get_item = recurse_index(self.bot.univ.Directories[ctx.guild.id]['tree'], path)
@@ -519,19 +521,22 @@ Confirm: You are deleting an external category.
                     raise TypeError
 
         try:
-            for channel in recurse_delete_category(get_item):
+            for channel in recurse_delete_category(get_item[name]):
                 if channel:
                     await channel.delete()
 
             get_item.pop(name)
+            self.bot.univ.LoadingUpdate[ctx.guild.id] = False
 
         except TypeError:
+            self.bot.univ.LoadingUpdate[ctx.guild.id] = False
             return await ctx.send(
                 "That's a channel silly! If you need to, go to the channel and delete it yourself. "
                 "I currently cannot do that myself."
             )
 
         except KeyError as e:
+            self.bot.univ.LoadingUpdate[ctx.guild.id] = False
             return await ctx.send(f"That directory doesn't exist.\n`Invalid category name: {e}`", delete_after=5)
 
         else:
