@@ -66,12 +66,6 @@ class Events(Cog):
                     self.bot.univ.LoadingUpdate[channel.guild.id] = False
 
     @Cog.listener()
-    async def on_ready(self):
-        print("Logged in as", self.bot.user)
-        print("ID:", self.bot.user.id)
-        print('------')
-
-    @Cog.listener()
     async def on_message(self, msg):
         if not msg.guild:
             return
