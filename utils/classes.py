@@ -386,7 +386,7 @@ class Bot(DiscordBot):
 
                             if channel is None:
                                 d.pop(key)
-                                return False
+                                return d
 
                             else:
                                 lines.append(f"{'ーー' * depth} **[** {key} **>>>** ||{channel.mention}||")
@@ -395,12 +395,11 @@ class Bot(DiscordBot):
                             category = f"**{'ーー' * depth} Category: [** {key} **]**"
                             ret = recurse_read(bot, val, lines, depth + 1, category)
 
-                            if not ret:
-                                return False
+                            if isinstance(ret, dict):
+                                d[key] = ret
+                                return d
 
                     return True
-
-
 
                 while True:
                     chan_directory = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
@@ -410,7 +409,8 @@ class Bot(DiscordBot):
 
                     result = recurse_read(self, self.univ.Directories[ctx.guild.id]["tree"]["root"], message_lines)
 
-                    if result is False:
+                    if isinstance(result, dict):
+                        self.univ.Directories[ctx.guild.id]["tree"]["root"] = result
                         continue
 
                     else:
