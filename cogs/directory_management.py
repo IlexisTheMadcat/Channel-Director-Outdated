@@ -1,23 +1,18 @@
 # Lib
-import os
+from os import remove
 from asyncio import TimeoutError, sleep
 from pickle import Unpickler, dump
 
 # Site
-from typing import List
-
-from discord import File
-from discord.ext import commands
 from discord.ext.commands.cog import Cog
 from discord.ext.commands.context import Context
 from discord.ext.commands.core import bot_has_permissions, command, has_permissions
 from discord.errors import NotFound
+from discord.file import File
 
 # Local
-from utils.classes import (
-    Bot
-)
-from utils.recurse_index import recurse_index
+from utils.classes import Bot
+from utils.directory_mgmt import recurse_index
 
 
 class Commands(Cog):
@@ -25,10 +20,15 @@ class Commands(Cog):
         self.bot = bot
         self.bot.remove_command("help")
 
-    @command(name="setup", aliases=["su"])
-    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True, manage_roles=True,
-                         add_reactions=True)
+    @bot_has_permissions(
+        send_messages=True,
+        manage_channels=True,
+        manage_messages=True,
+        manage_roles=True,
+        add_reactions=True
+    )
     @has_permissions(manage_channels=True, manage_guild=True)
+    @command(name="setup", aliases=["su"])
     async def setup_directory(self, ctx: Context):
         if not ctx.guild:
             await ctx.send("This command cannot be used in a DM channel.")
@@ -160,7 +160,7 @@ Do you want to attempt to load it?
                                     content=f"The setup failed because the file is either changed, corrupted, or outdated.\n`Error description: {e}`")
                                 return
 
-                        os.remove(f"{self.bot.cwd}/Workspace/incoming.pkl")
+                        remove(f"{self.bot.cwd}/Workspace/incoming.pkl")
 
                         cat = await ctx.guild.create_category("CDR: Directories (Bot Managed)")
                         directory = await cat.create_text_channel("directory",
@@ -214,10 +214,15 @@ Do you want to attempt to load it?
 
                     return
 
-    @command(name="teardown", aliases=["td"])
-    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True, add_reactions=True)
+    @bot_has_permissions(
+        send_messages=True,
+        manage_channels=True,
+        manage_messages=True,
+        add_reactions=True
+    )
     @has_permissions(manage_channels=True, manage_guild=True)
-    async def teardown_directory(self, ctx: Context, categoryID: int = 0):
+    @command(name="teardown", aliases=["td"])
+    async def teardown_directory(self, ctx: Context, categoryID: int=0):
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
             return
@@ -424,9 +429,9 @@ Confirm: You are deleting an external category.
                 f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
             return
 
-    @commands.command(aliases=["new_cat"])
-    @commands.bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
-    @commands.has_permissions(manage_channels=True)
+    @command(aliases=["new_cat"])
+    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
+    @has_permissions(manage_channels=True)
     async def create_category(self, ctx, directory, name):
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
@@ -471,205 +476,79 @@ Confirm: You are deleting an external category.
             await ctx.send(
                 f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
 
-    @commands.command(aliases=["del_cat"])
-    @commands.bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
-    @commands.has_permissions(manage_channels=True)
-    async def delete_category(self, ctx, directory, name):  # TODO: Apply recursion to channel deletion within categories
-        if ctx.guild is None:
-            await ctx.send("This command cannot be used in a DM channel.")
-            return
+    @command(aliases=["del_cat"])
+    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
+    @has_permissions(manage_channels=True)
+    async def delete_category(self, ctx, directory, name):
+        """"""
 
-        if ctx.guild.id in self.bot.univ.Directories.keys():
-            if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
-                await ctx.message.delete()
-                if ctx.guild.id in self.bot.univ.LoadingUpdate.keys():
-                    if self.bot.univ.LoadingUpdate[ctx.guild.id]:
-                        await ctx.send("The directory is being updated at the moment. Try again in a few seconds.", delete_after=10)
-                        return
+        if not ctx.guild:
+            return await ctx.send("This command cannot be used in a DM channel.")
 
-                d = directory.split("//")
-                try:
-                    if len(d) == 1:
-                        try:
-                            if isinstance(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][name], dict):
-                                for ik, iv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][name].items():
-                                    if isinstance(iv, int):
-                                        try:
-                                            channel = self.bot.get_channel(iv)
-                                            await channel.delete()
-                                        except NotFound:
-                                            pass
+        if not ctx.guild.id in self.bot.univ.Directories.keys():
+            return await ctx.send(
+                f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one."
+            )
 
-                                    elif isinstance(iv, dict):
-                                        for xk, xv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][name][
-                                            ik].items():
-                                            if isinstance(xv, int):
-                                                try:
-                                                    channel = self.bot.get_channel(xv)
-                                                    await channel.delete()
-                                                except NotFound:
-                                                    pass
+        if ctx.channel.id != self.bot.univ.Directories[ctx.guild.id]["channelID"]:
+            return await ctx.send(
+                f"This command must be used in the directory channel created by the bot.\n"
+                f"Deleted it? Use the command `{self.bot.command_prefix}update`."
+            )
 
-                                            elif isinstance(xv, dict):
-                                                for yk, yv in \
-                                                self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][name][ik][
-                                                    xk].items():
-                                                    if isinstance(yv, int):
-                                                        try:
-                                                            channel = self.bot.get_channel(yv)
-                                                            await channel.delete()
-                                                        except NotFound:
-                                                            pass
+        await ctx.message.delete()
 
-                                                    elif isinstance(yv, dict):
-                                                        for zk, zv in \
-                                                        self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][name][ik][
-                                                            xk][yk].items():
-                                                            if isinstance(zv, int):
-                                                                try:
-                                                                    channel = self.bot.get_channel(zv)
-                                                                    await channel.delete()
-                                                                except NotFound:
-                                                                    pass
-                            else:
-                                raise TypeError
+        if self.bot.univ.LoadingUpdate.get(ctx.guild.id, None):
+            return await ctx.send(
+                "The directory is being updated at the moment. Try again in a few seconds.",
+                delete_after=10
+            )
 
-                            self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]].pop(name)
-                        except TypeError:
-                            await ctx.send(
-                                "That's a channel silly! If you need to, go to the channel and delete it yourself. I currently cannot do that myself.")
+        self.bot.univ.LoadingUpdate[ctx.guild.id] = True
 
-                    elif len(d) == 2:
-                        try:
-                            if isinstance(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][name], dict):
-                                for ik, iv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][name].items():
-                                    if isinstance(iv, int):
-                                        try:
-                                            channel = self.bot.get_channel(iv)
-                                            await channel.delete()
-                                        except NotFound:
-                                            pass
+        path = directory.split("//")
+        get_item = recurse_index(self.bot.univ.Directories[ctx.guild.id]['tree'], path)
 
-                                    elif isinstance(iv, dict):
-                                        for xk, xv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][name][
-                                            ik].items():
-                                            if isinstance(xv, int):
-                                                try:
-                                                    channel = self.bot.get_channel(xv)
-                                                    await channel.delete()
-                                                except NotFound:
-                                                    pass
+        def recurse_delete_category(d: dict):
+            for key, val in d.items():
+                if isinstance(val, int):
+                    channel = self.bot.get_channel(val)
+                    if channel:
+                        yield channel
+                elif isinstance(val, dict):
+                    yield from recurse_delete_category(val)
+                else:
+                    raise TypeError
 
-                                            elif isinstance(xv, dict):
-                                                for yk, yv in \
-                                                self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][name][ik][
-                                                    xk].items():
-                                                    if isinstance(yv, int):
-                                                        try:
-                                                            channel = self.bot.get_channel(yv)
-                                                            await channel.delete()
-                                                        except NotFound:
-                                                            pass
+        try:
+            for channel in recurse_delete_category(get_item[name]):
+                if channel:
+                    await channel.delete()
 
-                                                    elif isinstance(yv, dict):
-                                                        for zk, zv in \
-                                                        self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][
-                                                            name][ik][xk][yk].items():
-                                                            if isinstance(zv, int):
-                                                                try:
-                                                                    channel = self.bot.get_channel(zv)
-                                                                    await channel.delete()
-                                                                except NotFound:
-                                                                    pass
-                            else:
-                                raise TypeError
+            get_item.pop(name)
+            self.bot.univ.LoadingUpdate[ctx.guild.id] = False
 
-                            self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]].pop(name)
-                        except TypeError:
-                            await ctx.send(
-                                "That's a channel silly! If you need to, go to the channel and delete it yourself. I currently cannot do that myself.")
+        except TypeError:
+            self.bot.univ.LoadingUpdate[ctx.guild.id] = False
+            return await ctx.send(
+                "That's a channel silly! If you need to, go to the channel and delete it yourself. "
+                "I currently cannot do that myself."
+            )
 
-                    elif len(d) == 3:
-                        try:
-                            if isinstance(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][name],
-                                          dict):
-                                for ik, iv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][
-                                    name].items():
-                                    if isinstance(iv, int):
-                                        try:
-                                            channel = self.bot.get_channel(iv)
-                                            await channel.delete()
-                                        except NotFound:
-                                            pass
+        except KeyError as e:
+            self.bot.univ.LoadingUpdate[ctx.guild.id] = False
+            return await ctx.send(f"That directory doesn't exist.\n`Invalid category name: {e}`", delete_after=5)
 
-                                    elif isinstance(iv, dict):
-                                        for xk, xv in \
-                                        self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][name][
-                                            ik].items():
-                                            if isinstance(xv, int):
-                                                try:
-                                                    channel = self.bot.get_channel(xv)
-                                                    await channel.delete()
-                                                except NotFound:
-                                                    pass
-
-                                            elif isinstance(xv, dict):
-                                                for yk, yv in \
-                                                self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][name][
-                                                    ik][xk].items():
-                                                    if isinstance(yv, int):
-                                                        try:
-                                                            channel = self.bot.get_channel(yv)
-                                                            await channel.delete()
-                                                        except NotFound:
-                                                            pass
-
-                            else:
-                                raise TypeError
-
-                            self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]].pop(name)
-                        except TypeError:
-                            await ctx.send(
-                                "That's a channel silly! If you need to, go to the channel and delete it yourself. I currently cannot do that myself.")
-
-                    elif len(d) == 4:
-                        try:
-                            if isinstance(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][d[3]][name],
-                                          dict):
-                                for ik, iv in self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][d[3]][
-                                    name].items():
-                                    if isinstance(iv, int):
-                                        try:
-                                            channel = self.bot.get_channel(iv)
-                                            await channel.delete()
-                                        except NotFound:
-                                            pass
-
-                            else:
-                                raise TypeError
-
-                            self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][d[1]][d[2]][d[3]].pop(name)
-                        except TypeError:
-                            await ctx.send(
-                                "That's a channel silly! If you need to, go to the channel and delete it yourself. I currently cannot do that myself.")
-
-                    await self.bot.update_directory(ctx=ctx,
-                                                    note=f"Deleted category; Name: \"{name}\"; Path: \"{directory}\".")
-                    print(f"- Deleted category from server \"{ctx.guild.name}\".")
-
-                except KeyError as e:
-                    await ctx.send(f"That directory doesn't exist.\n`Invalid category name: {e}`", delete_after=5)
-                    return
-            else:
-                await ctx.send(
-                    f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
         else:
-            await ctx.send(
-                f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
+            await self.bot.update_directory(
+                ctx=ctx,
+                note=f"Deleted category; Name: \"{name}\"; Path: \"{directory}\"."
+            )
+            print(f"- Deleted category from server \"{ctx.guild.name}\".")
 
-    @commands.command(aliases=["rn_ch"])
-    @commands.bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
-    @commands.has_permissions(manage_channels=True)
+    @command(aliases=["rn_ch"])
+    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
+    @has_permissions(manage_channels=True)
     async def rename_channel(self, ctx, directory, name, rename):
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
@@ -712,9 +591,9 @@ Confirm: You are deleting an external category.
             await ctx.send(
                 f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
 
-    @commands.command(aliases=["mv_ch"])
-    @commands.bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
-    @commands.has_permissions(manage_channels=True)
+    @command(aliases=["mv_ch"])
+    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
+    @has_permissions(manage_channels=True)
     async def move_channel(self, ctx, directory, name, new_directory):
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
@@ -770,9 +649,9 @@ Confirm: You are deleting an external category.
             await ctx.send(
                 f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
 
-    @commands.command(aliases=["imp_ch"])
-    @commands.bot_has_permissions(send_messages=True, manage_messages=True)
-    @commands.has_permissions(manage_channels=True)
+    @command(aliases=["imp_ch"])
+    @bot_has_permissions(send_messages=True, manage_messages=True)
+    @has_permissions(manage_channels=True)
     async def import_channel(self, ctx, channel, new_directory, name):
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
@@ -822,9 +701,9 @@ Confirm: You are deleting an external category.
             await ctx.send(
                 f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
 
-    @commands.command(aliases=["hd"])
-    @commands.bot_has_permissions(send_messages=True, manage_messages=True)
-    @commands.has_permissions(manage_channels=True)
+    @command(aliases=["hd"])
+    @bot_has_permissions(send_messages=True, manage_messages=True)
+    @has_permissions(manage_channels=True)
     async def hide_channel(self, ctx, directory, name):
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
@@ -858,8 +737,8 @@ Confirm: You are deleting an external category.
             await ctx.send(
                 f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
 
-    @commands.command(aliases=["save"])
-    @commands.bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True, attach_files=True)
+    @command(aliases=["save"])
+    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True, attach_files=True)
     async def save_directory(self, ctx):
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
@@ -888,9 +767,9 @@ Confirm: You are deleting an external category.
             await ctx.send(
                 f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
 
-    @commands.command()
-    @commands.bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
-    @commands.has_permissions(manage_channels=True)
+    @command()
+    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
+    @has_permissions(manage_channels=True)
     async def update(self, ctx):
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
