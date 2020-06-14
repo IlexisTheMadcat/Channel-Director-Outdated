@@ -1,19 +1,19 @@
 # Lib
-from typing import List
-from copy import deepcopy
-from asyncio import sleep
+from asyncio.tasks import sleep
 from contextlib import suppress
+from copy import deepcopy
 from datetime import datetime
 from os import getcwd
 from os.path import exists
 from pickle import dump, Unpickler
 from re import match
+from typing import List
 
 # Site
 from dbl.client import DBLClient
 from dbl.errors import DBLException
-from discord.errors import NotFound, HTTPException
 from discord.channel import TextChannel
+from discord.errors import HTTPException, NotFound
 from discord.ext.commands.bot import Bot as DiscordBot
 from discord.ext.commands.context import Context
 from discord.ext.commands.converter import IDConverter
@@ -24,8 +24,8 @@ from discord.utils import find, get
 # Local
 from utils.fileinterface import PickleInterface
 
-class Paginator:
 
+class Paginator:
 
     def __init__(
             self,
@@ -262,228 +262,192 @@ class Bot(DiscordBot):
         with suppress(RuntimeError, RuntimeWarning):
             await super().logout()
 
-    async def convert_to_readable(self, ctx):  # It is advised to use update_directory(ctx) first. 'ctx' must meet the requirements for getting .guild and its directory.
+    # It is advised to use update_directory(ctx) first.
+    # 'ctx' must meet the requirements for getting .guild and its directory.
+    def convert_to_readable(self, ctx: Context):
+        """Replaces all channel IDs `int` with `None`"""
+
         await self.update_directory(ctx=ctx, note=f"Updated to create download file.")
         directory = deepcopy(self.univ.Directories[ctx.guild.id]["tree"])
 
-        if isinstance(directory, dict):
-            for ik, iv in directory["root"].items():
-                if isinstance(iv, int):
-                    directory["root"][ik] = None
-                elif isinstance(iv, dict):
-                    for xk, xv in directory["root"][ik].items():
-                        if isinstance(xv, int):
-                            directory["root"][ik][xk] = None
-                        elif isinstance(xv, dict):
-                            for yk, yv in directory["root"][ik][xk].items():
-                                if isinstance(yv, int):
-                                    directory["root"][ik][xk][yk] = None
-                                elif isinstance(yv, dict):
-                                    for zk, zv in directory["root"][ik][xk][yk].items():
-                                        if isinstance(zv, int):
-                                            directory["root"][ik][xk][yk][zk] = None
-                                        elif isinstance(zv, dict):
-                                            for ak, av in directory["root"][ik][xk][yk][zk].items():
-                                                if isinstance(av, int):
-                                                    directory["root"][ik][xk][yk][zk][ak] = None
-            return directory
-        else:
-            raise ValueError("Invalid directory dictionary passed.")
+        def recurse_convert_to_readable(d: dict):
+            for key, val in d.items():
+                if isinstance(val, int):
+                    d[key] = None
+                elif isinstance(val, dict):
+                    recurse_convert_to_readable(d[key])
+                else:
+                    raise ValueError("Invalid directory dictionary passed.")
 
-    async def convert_to_directory(self, ctx, directory: dict):
-        # This function should be used in an automatic setup.
-        # 'ctx' must meet the requirements for getting .guild. 'directory' is the directory from the unpickled file attached.
+        recurse_convert_to_readable(directory)
+        return directory
+
+    async def convert_to_directory(self, ctx: Context, directory: dict):
+        """Create new channels for directory"""
+
+        # This method should be used in an automatic setup.
+        # 'ctx' must meet the requirements for getting .guild.
+        # 'directory' is the directory from the unpickled file attached.
         self.univ.LoadingUpdate.update({ctx.guild.id: True})
         cat = self.get_channel(self.univ.Directories[ctx.guild.id]["categoryID"])
-        dchannel = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
+        chan_directory = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
 
-        if isinstance(directory, dict):
-            for ik, iv in directory["root"].items():
-                if iv is None:
-                    ch = await cat.create_text_channel("finishing creation...")
-                    directory["root"][ik] = ch.id
-                    await ch.edit(name=f"{ik}-{ch.id}", topic=f"Go back: {dchannel.mention}; Name: {ik}")
+        async def recurse_convert_to_directory(d: dict, univ: Globals):
+            """Recursively create new channels from directory dict"""
+            for key, val in d.items():
+                if val is None:
+                    channel = await cat.create_text_channel("finishing creation...")
+                    d[key] = channel.id
+                    await channel.edit(
+                        name=f"{key}-{channel.id}",
+                        topic=f"Go back: {chan_directory.mention}; Name: {key}"
+                    )
+                    await sleep(0.2)
 
-                elif isinstance(iv, dict):
-                    for xk, xv in directory["root"][ik].items():
-                        if xv is None:
-                            ch = await cat.create_text_channel("finishing creation...")
-                            directory["root"][ik][xk] = ch.id
-                            await ch.edit(name=f"{xk}-{ch.id}", topic=f"Go back: {dchannel.mention}; Name: {ik}")
+                elif isinstance(val, dict):
+                    await recurse_convert_to_directory(val, univ)
 
-                        elif isinstance(xv, dict):
-                            for yk, yv in directory["root"][ik][xk].items():
-                                if yv is None:
-                                    ch = await cat.create_text_channel("finishing creation...")
-                                    directory["root"][ik][xk][yk] = ch.id
-                                    await ch.edit(name=f"{yk}-{ch.id}",
-                                                  topic=f"Go back: {dchannel.mention}; Name: {ik}")
+                else:
+                    univ.LoadingUpdate.update({ctx.guild.id: False})
+                    raise TypeError("Invalid dictionary passed.")
 
-                                elif isinstance(yv, dict):
-                                    for zk, zv in directory["root"][ik][xk][yk].items():
-                                        if zv is None:
-                                            ch = await cat.create_text_channel("finishing creation...")
-                                            directory["root"][ik][xk][yk][zk] = ch.id
-                                            await ch.edit(name=f"{zk}-{ch.id}",
-                                                          topic=f"Go back: {dchannel.mention}; Name: {ik}")
+            univ.LoadingUpdate.update({ctx.guild.id: False})
 
-                                        elif isinstance(zv, dict):
-                                            for ak, av in directory["root"][ik][xk][yk][zk].items():
-                                                if av is None:
-                                                    ch = await cat.create_text_channel("finishing creation...")
-                                                    directory["root"][ik][xk][yk][zk][ak] = ch.id
-                                                    await ch.edit(name=f"{ak}-{ch.id}",
-                                                                  topic=f"Go back: {dchannel.mention}; Name: {ik}")
-            self.univ.LoadingUpdate.update({ctx.guild.id: False})
-            return directory
-        else:
-            self.univ.LoadingUpdate.update({ctx.guild.id: False})
-            raise TypeError("Invalid dictionary passed.")
+        await recurse_convert_to_directory(directory["root"], self.univ)
+        return directory
 
     async def update_directory(self, ctx, note="..."):
-        # ctx must meet the requirements for accessing .guild and a Messagable.
+        """"""
+
+        # ctx must meet the requirements for accessing .guild and a Messageable
         self.univ.LoadingUpdate.update({ctx.guild.id: True})
+
         try:
-            dchannel = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
+            chan_directory = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
+
         except NotFound:
             try:
                 cat = self.get_channel(self.univ.Directories[ctx.guild.id]["categoryID"])
-            except NotFound:
-                await ctx.send("You need to set up your directory again.")
-                self.univ.Directories.pop(ctx.guild.id)
-                return
 
-            dchannel = await cat.create_text_channel("directory", topic="Managers: Leave this channel on top for easy access. Feel free to move or rename it.")
-            self.univ.Directories[ctx.guild.id]["channelID"] = dchannel.id
-            msg = await dchannel.send("Completing repairs...")
+            except NotFound:
+                self.univ.Directories.pop(ctx.guild.id)
+                return await ctx.send("You need to set up your directory again.")
+
+            chan_directory = await cat.create_text_channel(
+                "directory",
+                topic="Managers: Leave this channel on top for easy access. "
+                      "Feel free to move or rename it."
+            )
+
+            self.univ.Directories[ctx.guild.id]["channelID"] = chan_directory.id
+            msg = await chan_directory.send("Completing repairs...")
             self.univ.Directories[ctx.guild.id]["msgID"] = msg.id
 
         try:
-            msg = await dchannel.fetch_message(self.univ.Directories[ctx.guild.id]["msgID"])
-        except NotFound:
-            msg = await dchannel.send("Completing repairs...")
+            msg = await chan_directory.fetch_message(self.univ.Directories[ctx.guild.id]["msgID"])
             self.univ.Directories[ctx.guild.id]["msgID"] = msg.id
 
-        async with dchannel.typing():
+        except NotFound:
+            msg = await chan_directory.send("Completing repairs...")
+            self.univ.Directories[ctx.guild.id]["msgID"] = msg.id
+
+        async with chan_directory.typing():
             if not list(self.univ.Directories[ctx.guild.id]["tree"]["root"].items()):
-                msg = await dchannel.fetch_message(self.univ.Directories[ctx.guild.id]["msgID"])
-                await msg.edit(content="""
-This channel will have a directory under it when you create a channel using the special command that I provide to you.
-Also, make sure I have access to all channels added.
-You are free to move this channel, but it's best to leave on top.
-""")
-                await dchannel.send(f"Updated. `{note}`", delete_after=5)
-                return
+                await msg.edit(
+                    content="This channel will have a directory under it when "
+                            "you create a channel using the special command "
+                            "that I provide to you.\n"
+                            "Also, make sure I have access to all channels "
+                            "added.\n"
+                            "You are free to move this channel, but it's best "
+                            "to leave on top.\n"
+                )
+                return await chan_directory.send(f"Updated. `{note}`", delete_after=5)
 
             else:
-                message_lines = []
 
-                async def read():
-                    message_lines.append("Root Category:")
-                    self.univ.LoadingUpdate[ctx.guild.id] = True
-                    for ik, iv in self.univ.Directories[ctx.guild.id]["tree"]["root"].items():
-                        if isinstance(iv, int):
-                            channel = self.get_channel(iv)
+                def recurse_read(
+                        bot: Bot,
+                        d: dict,
+                        lines: List[str],
+                        depth: int = 1,
+                        category: str = "Root Category:"
+                ):
+                    """Recursively walk bot.Directories for guild and generate
+                    a list of strings representing the directory message"""
+
+                    lines.append(category)
+
+                    for key, val in d.items():
+
+                        if isinstance(val, int):
+                            channel = bot.get_channel(val)
+
                             if channel is None:
-                                self.univ.Directories[ctx.guild.id]["tree"]["root"].pop(ik)
+                                d.pop(key)
                                 return False
+
                             else:
-                                message_lines.append(f"ーー **[** {ik} **>>>** ||{channel.mention}||")
+                                lines.append(f"{'ーー' * depth} **[** {key} **>>>** ||{channel.mention}||")
 
-                        elif isinstance(iv, dict):
-                            message_lines.append(f"**ーー Category: [** {ik} **]**")
-                            for xk, xv in self.univ.Directories[ctx.guild.id]["tree"]["root"][ik].items():
-                                if isinstance(xv, int):
-                                    channel = self.get_channel(xv)
-                                    if channel is None:
-                                        self.univ.Directories[ctx.guild.id]["tree"]["root"][ik].pop(xk)
-                                        return False
-                                    else:
-                                        message_lines.append(f"ーーーー **[** {xk} **>>>** ||{channel.mention}||")
+                        elif isinstance(val, dict):
+                            category = f"**{'ーー' * depth} Category: [** {key} **]**"
+                            ret = recurse_read(bot, val, lines, depth + 1, category)
 
-                                elif isinstance(xv, dict):
-                                    message_lines.append(f"**ーーーー Category: [** {xk} **]**")
-                                    for yk, yv in self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk].items():
-                                        if isinstance(yv, int):
-                                            channel = self.get_channel(yv)
-                                            if channel is None:
-                                                self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk].pop(yk)
-                                                return False
-                                            else:
-                                                message_lines.append(f"ーーーーーー **[** {yk} **>>>** ||{channel.mention}||")
+                            if not ret:
+                                return False
 
-                                        elif isinstance(yv, dict):
-                                            message_lines.append(f"**ーーーーーー Category: [** {yk} **]**")
-                                            for zk, zv in self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][yk].items():
-                                                if isinstance(zv, int):
-                                                    channel = self.get_channel(zv)
-                                                    if channel is None:
-                                                        self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][yk].pop(zk)
-                                                        return False
-                                                    else:
-                                                        message_lines.append(f"ーーーーーーーー **[** {zk} **>>>** ||{channel.mention}||")
-
-                                                elif isinstance(zv, dict):
-                                                    message_lines.append(f"**ーーーーーーーー Category: [** {zk} **]**")
-                                                    for ak, av in self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][yk][zk].items():
-                                                        if isinstance(av, int):
-                                                            channel = self.get_channel(av)
-                                                            if channel is None:
-                                                                self.univ.Directories[ctx.guild.id]["tree"]["root"][ik][xk][yk][zk].pop(ak)
-                                                                return False
-                                                            else:
-                                                                message_lines.append(f"ーーーーーーーーーー **[** {ak} **>>>** ||{channel.mention}||")
+                        d = {k: d[k] for k in sorted(d, key=lambda k: isinstance(d[k], dict))}
 
                     return True
 
                 while True:
-                    dchannel = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
-                    msg = await dchannel.fetch_message(self.univ.Directories[ctx.guild.id]["msgID"])
-                    result = await read()
+                    chan_directory = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
+                    msg = await chan_directory.fetch_message(self.univ.Directories[ctx.guild.id]["msgID"])
+
+                    message_lines = list()
+
+                    result = recurse_read(self, self.univ.Directories[ctx.guild.id]["tree"]["root"], list())
+
                     if result is False:
-                        message_lines = []
                         continue
+
                     else:
 
                         self.univ.LoadingUpdate[ctx.guild.id] = False
                         if not list(self.univ.Directories[ctx.guild.id]["tree"]["root"].items()):
-                            await msg.edit(content="""
-This channel will have a directory under it when you create a channel using the special command that I provide to you.
-Also, make sure I have access to all channels added.
-You are free to move this channel, but it's best to leave on top.
-""")
-                            await dchannel.send(f"Updated. `{note}`", delete_after=10)
+                            await msg.edit(
+                                content="This channel will have a directory under it when you create "
+                                        "a channel using the special command that I provide to you.\n"
+                                        "Also, make sure I have access to all channels added.\n"
+                                        "You are free to move this channel, but it's best to leave on top."
+                            )
+                            await chan_directory.send(f"Updated. `{note}`", delete_after=10)
                             return
 
                         else:
                             message_full = "\n".join(message_lines)
                             try:
-                                message = await dchannel.fetch_message(self.univ.Directories[ctx.guild.id]["msgID"])
+                                message = await chan_directory.fetch_message(
+                                    self.univ.Directories[ctx.guild.id]["msgID"]
+                                )
+
                             except NotFound:
-                                message = await dchannel.send("Completing...")
+                                message = await chan_directory.send("Completing...")
 
                             try:
                                 await message.edit(content=message_full)
-                                await dchannel.send(f"Updated. `{note}`", delete_after=10)
+                                await chan_directory.send(f"Updated. `{note}`", delete_after=10)
                                 return
 
                             except HTTPException as e:
-                                await dchannel.send(
+                                await chan_directory.send(
                                     ":exclamation: The directory message is too large to be edited. "
                                     "A fix will be implemented in the future.\n"
                                     "If this is not the case, it is likely a network or Discord error. "
                                     f"Please try again.\n`Error description: [{e}]`",
-                                    delete_after=20)
+                                    delete_after=20
+                                )
                             return
 
         self.univ.LoadingUpdate.update({ctx.guild.id: False})
-
-# class Navigator:
-#     def __init__(self, bot):
-#         self.bot = bot
-#
-#     @staticmethod
-#     async def compile_and_send(self, ctx: Context, **items: {str: str}):  # **items is a dict of str("title"):str("Data")
-#         above = list([str()])
-#         selected = str()
-#         below = list([str()])
