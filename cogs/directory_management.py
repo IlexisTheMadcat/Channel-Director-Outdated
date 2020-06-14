@@ -290,9 +290,11 @@ If you want to, you can save your directory first using the `save_directory` com
                     await ctx.send("That category does exist, but it isn't in your server. Why would I let you do that? Spoiled prankster.")
                     return
 
-            msg = await ctx.send("Are you sure?\n"
-                                 "Confirm: You are deleting an external category.\n`[  ]`")
-
+            msg = await ctx.send("""
+Are you sure?
+Confirm: You are deleting an external category.
+`[  ] (=================)`
+""")
             await msg.add_reaction("✅")
             await msg.add_reaction("❎")
 
@@ -309,14 +311,20 @@ If you want to, you can save your directory first using the `save_directory` com
                 await msg.clear_reactions()
                 if str(reaction.emoji) == "❎":
                     await msg.edit(
-                        content="Are you sure?\n"
-                                "Confirm: You are deleting an external category.\n`[❎]`")
+                        content="""
+Are you sure?
+Confirm: You are deleting an external category.
+`[❎] (=================)`
+""")
                     await sleep(2)
                     await msg.edit(content="Okay, I canceled the operation.")
                     return
 
-                await msg.edit(content="Are you sure?\n"
-                                       "Confirm: You are deleting an external category.\n`[✅]`")
+                await msg.edit(content="""
+Are you sure?
+Confirm: You are deleting an external category.
+`[✅] (=================)`
+""")
                 await sleep(2)
                 await msg.edit(content="Tearing down external category...")
                 self.bot.univ.TearingDown.append(ctx.guild.id)
