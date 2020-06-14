@@ -1,5 +1,4 @@
 # Lib
-from contextlib import suppress
 from pickle import Unpickler
 from os import getcwd
 from os.path import join, exists
@@ -9,7 +8,6 @@ from random import choice
 from discord import __version__
 from discord.activity import Activity
 from discord.enums import ActivityType, Status
-from discord.errors import LoginFailure
 from discord.permissions import Permissions
 from discord.utils import oauth_url
 
@@ -145,23 +143,4 @@ if __name__ == "__main__":
             print("Last DBL login failed or unknown.")
 
     print("Logging in with token.")
-
-    while True:
-
-        try:
-
-            if not bot.auth["MWS_BOT_TOKEN"]:
-                raise LoginFailure
-
-            with suppress(RuntimeError, RuntimeWarning):
-                bot.run()
-
-        except LoginFailure:
-
-            bot.auth["MWS_BOT_TOKEN"] = None
-
-            print("\nLogin Failed: No token was provided or token provided was invalid.")
-            break
-
-        except KeyboardInterrupt:
-            break
+    bot.run()
