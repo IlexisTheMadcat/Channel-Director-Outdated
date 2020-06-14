@@ -397,8 +397,7 @@ Confirm: You are deleting an external category.
                             raise KeyError(str(d[-1]))
                         else:
                             if name in get_item.keys():
-                                await ctx.send("A channel or category in that directory already exists.",
-                                               delete_after=5)
+                                await ctx.send("A channel or category in that directory already exists.", delete_after=5)
                                 return
 
                             category = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
@@ -485,8 +484,7 @@ Confirm: You are deleting an external category.
                 await ctx.message.delete()
                 if ctx.guild.id in self.bot.univ.LoadingUpdate.keys():
                     if self.bot.univ.LoadingUpdate[ctx.guild.id]:
-                        await ctx.send("The directory is being updated at the moment. Try again in a few seconds.",
-                                       delete_after=10)
+                        await ctx.send("The directory is being updated at the moment. Try again in a few seconds.", delete_after=10)
                         return
 
                 d = directory.split("//")
