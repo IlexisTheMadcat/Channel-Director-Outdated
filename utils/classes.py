@@ -288,13 +288,12 @@ class Bot(DiscordBot):
         # This method should be used in an automatic setup.
         # 'ctx' must meet the requirements for getting .guild.
         # 'directory' is the directory from the unpickled file attached.
-        self.univ.LoadingUpdate.append(ctx.guild.id)
+        
         cat = self.get_channel(self.univ.Directories[ctx.guild.id]["categoryID"])
         chan_directory = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
 
         async def recurse_convert_to_directory(d: dict, univ: Globals):
             """Recursively create new channels from directory dict"""
-            self.univ.LoadingUpdate.append(ctx.guild.id)
 
             for key, val in d.items():
                 if val is None:
@@ -310,10 +309,9 @@ class Bot(DiscordBot):
                     await recurse_convert_to_directory(val, univ)
 
                 else:
-                    univ.LoadingUpdate.remove(ctx.guild.id)
                     raise TypeError("Invalid dictionary passed.")
 
-            self.univ.LoadingUpdate.remove(ctx.guild.id)
+            
 
         await recurse_convert_to_directory(directory["root"], self.univ)
         return directory
@@ -322,7 +320,7 @@ class Bot(DiscordBot):
         """"""
 
         # ctx must meet the requirements for accessing .guild and a Messageable
-        self.univ.LoadingUpdate.append(ctx.guild.id)
+        
 
         try:
             chan_directory = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
@@ -417,7 +415,7 @@ class Bot(DiscordBot):
 
                     else:
 
-                        self.univ.LoadingUpdate.remove(ctx.guild.id)
+                        
                         if not list(self.univ.Directories[ctx.guild.id]["tree"]["root"].items()):
                             await msg.edit(
                                 content="This channel will have a directory under it when you create "
@@ -453,4 +451,4 @@ class Bot(DiscordBot):
                                 )
                             return
 
-        self.univ.LoadingUpdate.remove(ctx.guild.id)
+        
