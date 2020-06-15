@@ -31,8 +31,14 @@ class Commands(Cog):
     @command(name="setup", aliases=["su"])
     async def setup_directory(self, ctx: Context):
         if not ctx.guild:
+            return await ctx.send("These commands will only work in a server.")
+
+        if not ctx.guild:
             await ctx.send("This command cannot be used in a DM channel.")
             return
+
+        if ctx.guild.id in self.bot.univ.LoadingUpdate:
+            await ctx.send("Wait a second, you impatient being!")
 
         if ctx.guild.id in self.bot.univ.Directories.keys():
             msg = await ctx.send("""
@@ -66,6 +72,8 @@ The entire process is handled by me so, mind your manners, please.
         except TimeoutError:
             await msg.edit(content="You timed out, so I wont continue.")
             await msg.clear_reactions()
+            
+            return
         else:
             await reaction.remove(user)
             if ctx.guild.id in self.bot.univ.Directories.keys():
@@ -78,6 +86,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                     await msg.clear_reactions()
                     await sleep(2)
                     await msg.edit(content="Okay, I canceled the operation.")
+                    
                     return
 
                 elif str(reaction.emoji) == "✅":
@@ -96,15 +105,13 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                     await msg.clear_reactions()
                     await sleep(2)
                     await msg.edit(content="Tearing down...")
-                    self.bot.univ.TearingDown.append(ctx.guild.id)
+                    
                     try:
                         category = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
                     except NotFound:
                         await msg.edit(content="I couldn't find the category for the channels.")
                         await sleep(2)
                         self.bot.univ.Directories.pop(ctx.guild.id)
-                        self.bot.univ.TearingDown.remove(ctx.guild.id)
-
                     else:
                         for i in category.channels:
                             await i.delete()
@@ -112,9 +119,8 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                         await category.delete()
 
                         self.bot.univ.Directories.pop(ctx.guild.id)
-                        self.bot.univ.TearingDown.remove(ctx.guild.id)
+                        
                         await msg.edit(content="Teardown complete.")
-                        await sleep(2)
 
             else:
                 if str(reaction.emoji) == "❎":
@@ -128,7 +134,9 @@ The entire process is handled by me so, mind your manners, please.
                     await msg.clear_reactions()
                     await sleep(2)
                     await msg.edit(content="Okay, I canceled the operation.")
+                    
                     return
+
                 elif str(reaction.emoji) == "✅":
                     await msg.edit(content="""
 This setup will create a new category that you can edit, **but you should never delete it**.
@@ -165,6 +173,7 @@ Do you want to attempt to load it?
                     except TimeoutError:
                         await msg.clear_reactions()
                         await msg.edit(content="You timed out, so I canceled the operation.")
+                        
                         return
                     else:
                         await msg.clear_reactions()
@@ -176,6 +185,7 @@ Do you want to attempt to load it?
 """)
                             await sleep(2)
                             await msg.edit(content="Okay, I canceled the operation.")
+                            
                             return
 
                         await msg.edit(content="""
@@ -195,6 +205,7 @@ Do you want to attempt to load it?
                             except Exception as e:
                                 await msg.edit(
                                     content=f"The setup failed because the file is either changed, corrupted, or outdated.\n`Error description: {e}`")
+                                
                                 return
 
                         remove(f"{self.bot.cwd}/Workspace/incoming.pkl")
@@ -224,11 +235,13 @@ Do you want to attempt to load it?
                             await cat.delete()
                             await msg.edit(
                                 content=f"The setup failed because the file does not contain valid data.\n`Error description: {e}`")
+                            
                             return
                         else:
                             await self.bot.update_directory(ctx=ctx, note="Finished automated setup.")
                             await msg.edit(content=f"Finished setup. Get to the directory here: {directory.mention}")
 
+                        
                         return
                 else:
                     await msg.clear_reactions()
@@ -248,7 +261,7 @@ Do you want to attempt to load it?
 
                     self.bot.univ.Directories.update({ctx.guild.id: {"categoryID": cat.id, "channelID": directory.id,
                                                                      "msgID": dmessage.id, "tree": {"root": {}}}})
-
+                    
                     return
 
     @bot_has_permissions(
@@ -260,14 +273,21 @@ Do you want to attempt to load it?
     @has_permissions(manage_channels=True, manage_guild=True)
     @command(name="teardown", aliases=["td"])
     async def teardown_directory(self, ctx: Context, categoryID: int=0):
+        if not ctx.guild:
+            return await ctx.send("These commands will only work in a server.")
+
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
             return
+
+        if ctx.guild.id in self.bot.univ.LoadingUpdate:
+            await ctx.send("Wait a second, you impatient being!")
 
         if categoryID == 0:
             if ctx.guild.id in self.bot.univ.Directories.keys():
                 if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                     await ctx.send("You can't do that here!", delete_after=5)
+                    
                     return
 
                 msg = await ctx.send("""
@@ -287,6 +307,7 @@ If you want to, you can save your directory first using the `save_directory` com
                 except TimeoutError:
                     await msg.clear_reactions()
                     await msg.edit(content="You timed out, so I wont continue.")
+                    
                     return
                 else:
                     await msg.clear_reactions()
@@ -298,6 +319,7 @@ If you want to, you can save your directory first using the `save_directory` com
 """)
                         await sleep(2)
                         await msg.edit(content="Okay, I canceled the operation.")
+                        
                         return
 
                     await msg.edit(content="""
@@ -307,13 +329,13 @@ If you want to, you can save your directory first using the `save_directory` com
 """)
                     await sleep(2)
                     await msg.edit(content="Tearing down...")
-                    self.bot.univ.TearingDown.append(ctx.guild.id)
+                    
                     try:
                         category = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
                     except NotFound:
                         await msg.edit(content="I couldn't find the category for the channels.")
                         self.bot.univ.Directories.pop(ctx.guild.id)
-                        self.bot.univ.TearingDown.remove(ctx.guild.id)
+                        
                         return
 
                     for i in category.channels:
@@ -322,7 +344,7 @@ If you want to, you can save your directory first using the `save_directory` com
                     await category.delete()
 
                     self.bot.univ.Directories.pop(ctx.guild.id)
-                    self.bot.univ.TearingDown.remove(ctx.guild.id)
+                    
                     await msg.edit(content="Teardown complete.")
             else:
                 await ctx.send("You don't have a directory to tear down.")
@@ -330,6 +352,7 @@ If you want to, you can save your directory first using the `save_directory` com
             if ctx.guild.id in self.bot.univ.Directories.keys() and ctx.channel.id == \
                     self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                 await ctx.send("You can't do that here!", delete_after=5)
+                
                 return
 
             if ctx.guild.id in self.bot.univ.Directories.keys() and categoryID == \
@@ -337,6 +360,7 @@ If you want to, you can save your directory first using the `save_directory` com
                 await ctx.send(
                     "You cannot specify the external category used for the directory. In that case, don't specify any ID.",
                     delete_after=5)
+                
                 return
 
             try:
@@ -346,7 +370,8 @@ If you want to, you can save your directory first using the `save_directory` com
             else:
                 if categoryID not in [guild.id for guild in ctx.guild.channels]:
                     await ctx.send(
-                        "That category does exist, but it isn't in your server. Why would I let you do that? Spoiled prankster.")
+                        "That category does exist, but it isn't in your server. Why would I let you do that?")
+                    
                     return
 
             msg = await ctx.send("""
@@ -365,6 +390,7 @@ Confirm: You are deleting an external category.
             except TimeoutError:
                 await msg.clear_reactions()
                 await msg.edit(content="You timed out, so I wont continue.")
+                
                 return
             else:
                 await msg.clear_reactions()
@@ -377,6 +403,7 @@ Confirm: You are deleting an external category.
 """)
                     await sleep(2)
                     await msg.edit(content="Okay, I canceled the operation.")
+                    
                     return
 
                 await msg.edit(content="""
@@ -386,27 +413,35 @@ Confirm: You are deleting an external category.
 """)
                 await sleep(2)
                 await msg.edit(content="Tearing down external category...")
-                self.bot.univ.TearingDown.append(ctx.guild.id)
+                
 
                 for i in category.channels:
                     await i.delete()
 
                 await category.delete()
 
-                self.bot.univ.TearingDown.remove(ctx.guild.id)
+                
                 await msg.edit(
                     content="Teardown complete. Note that imported channels from that directory will no longer appear in the directory if you have it set up.")
                 if ctx.guild.id in self.bot.univ.Directories.keys():
                     await self.bot.update_directory(ctx=ctx,
                                                     note="External category deletion; Imported channels from that category now removed.")
+                
+                return
 
     @command(aliases=["new_ch"])
     @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
     @has_permissions(manage_channels=True)
     async def create_channel(self, ctx: Context, directory: str, name: str):
+        if not ctx.guild:
+            return await ctx.send("These commands will only work in a server.")
+
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
             return
+
+        if ctx.guild.id in self.bot.univ.LoadingUpdate:
+            await ctx.send("Wait a second, you impatient being!")
 
         if ctx.guild.id in self.bot.univ.Directories.keys():
             if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
@@ -414,15 +449,18 @@ Confirm: You are deleting an external category.
                 if ctx.guild.id in self.bot.univ.LoadingUpdate:
                     await ctx.send("The directory is being updated at the moment. Try again in a few seconds.",
                                    delete_after=10)
+                    
                     return
 
                 if len(name) > 50:
                     await ctx.send("\"name\" cannot be greater than 50 characters long.", delete_after=5)
+                    
                     return
 
                 d = directory.split("//")
                 if len(d) > 5:
                     await ctx.send("You cannot create a channel in a directory deeper than 5.", delete_after=5)
+                    
                     return
 
                 try:
@@ -469,6 +507,9 @@ Confirm: You are deleting an external category.
     @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
     @has_permissions(manage_channels=True)
     async def create_category(self, ctx, directory, name):
+        if not ctx.guild:
+            return await ctx.send("These commands will only work in a server.")
+
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
             return
@@ -477,7 +518,7 @@ Confirm: You are deleting an external category.
             if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                 await ctx.message.delete()
                 if ctx.guild.id in self.bot.univ.LoadingUpdate:
-                    await ctx.send("The directory is being updated at the moment. Try again in a few seconds.", delete_after=10)
+                    await ctx.send("Wait a second, you impatient being!", delete_after=10)
                     return
 
                 if len(name) > 50:
@@ -515,6 +556,9 @@ Confirm: You are deleting an external category.
     @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
     @has_permissions(manage_channels=True)
     async def delete_category(self, ctx, directory, name):
+        if not ctx.guild:
+            return await ctx.send("These commands will only work in a server.")
+
         """"""
 
         if not ctx.guild:
@@ -535,11 +579,9 @@ Confirm: You are deleting an external category.
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
             return await ctx.send(
-                "The directory is being updated at the moment. Try again in a few seconds.",
+                "Wait a second, you impatient being!",
                 delete_after=10
             )
-
-        self.bot.univ.LoadingUpdate.append(ctx.guild.id)
 
         path = directory.split("//")
         get_item = recurse_index(self.bot.univ.Directories[ctx.guild.id]['tree'], path)
@@ -561,17 +603,16 @@ Confirm: You are deleting an external category.
                     await channel.delete()
 
             get_item.pop(name)
-            self.bot.univ.LoadingUpdate.remove(ctx.guild.id)
-
+            
         except TypeError:
-            self.bot.univ.LoadingUpdate.remove(ctx.guild.id)
+            
             return await ctx.send(
                 "That's a channel silly! If you need to, go to the channel and delete it yourself. "
                 "I currently cannot do that myself."
             )
 
         except KeyError as e:
-            self.bot.univ.LoadingUpdate.remove(ctx.guild.id)
+            
             return await ctx.send(f"That directory doesn't exist.\n`Invalid category name: {e}`", delete_after=5)
 
         else:
@@ -585,6 +626,9 @@ Confirm: You are deleting an external category.
     @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
     @has_permissions(manage_channels=True)
     async def rename_channel(self, ctx, directory, name, rename):
+        if not ctx.guild:
+            return await ctx.send("These commands will only work in a server.")
+
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
             return
@@ -593,7 +637,7 @@ Confirm: You are deleting an external category.
             if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                 await ctx.message.delete()
                 if ctx.guild.id in self.bot.univ.LoadingUpdate:
-                    await ctx.send("The directory is being updated at the moment. Try again in a few seconds.", delete_after=10)
+                    await ctx.send("Wait a second, you impatient being!", delete_after=10)
                     return
 
                 d = directory.split("//")
@@ -629,6 +673,9 @@ Confirm: You are deleting an external category.
     @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
     @has_permissions(manage_channels=True)
     async def move_channel(self, ctx, directory, name, new_directory):
+        if not ctx.guild:
+            return await ctx.send("These commands will only work in a server.")
+
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
             return
@@ -637,7 +684,7 @@ Confirm: You are deleting an external category.
             if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                 await ctx.message.delete()
                 if ctx.guild.id in self.bot.univ.LoadingUpdate:
-                    await ctx.send("The directory is being updated at the moment. Try again in a few seconds.", delete_after=10)
+                    await ctx.send("Wait a second, you impatient being!", delete_after=10)
                     return
 
                 d = directory.split("//")
@@ -685,6 +732,9 @@ Confirm: You are deleting an external category.
     @bot_has_permissions(send_messages=True, manage_messages=True)
     @has_permissions(manage_channels=True)
     async def import_channel(self, ctx, channel, new_directory, name):
+        if not ctx.guild:
+            return await ctx.send("These commands will only work in a server.")
+
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
             return
@@ -737,6 +787,9 @@ Confirm: You are deleting an external category.
     @bot_has_permissions(send_messages=True, manage_messages=True)
     @has_permissions(manage_channels=True)
     async def hide_channel(self, ctx, directory, name):
+        if not ctx.guild:
+            return await ctx.send("These commands will only work in a server.")
+
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
             return
@@ -772,6 +825,9 @@ Confirm: You are deleting an external category.
     @command(aliases=["save"])
     @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True, attach_files=True)
     async def save_directory(self, ctx):
+        if not ctx.guild:
+            return await ctx.send("These commands will only work in a server.")
+
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
             return
@@ -803,6 +859,9 @@ Confirm: You are deleting an external category.
     @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
     @has_permissions(manage_channels=True)
     async def update(self, ctx):
+        if not ctx.guild:
+            return await ctx.send("These commands will only work in a server.")
+
         if ctx.guild is None:
             await ctx.send("This command cannot be used in a DM channel.")
             return
@@ -818,6 +877,34 @@ Confirm: You are deleting an external category.
         else:
             await ctx.send(
                 f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
+
+    @setup_directory.before_invoke
+    @teardown_directory.before_invoke
+    @create_channel.before_invoke
+    @create_category.before_invoke
+    @delete_category.before_invoke
+    @rename_channel.before_invoke
+    @move_channel.before_invoke
+    @import_channel.before_invoke
+    @hide_channel.before_invoke
+    @save_directory.before_invoke
+    @update.before_invoke
+    async def loading_update(self, ctx):
+        self.bot.univ.LoadingUpdate.append(ctx.guild.id)
+
+    @setup_directory.after_invoke
+    @teardown_directory.after_invoke
+    @create_channel.after_invoke
+    @create_category.after_invoke
+    @delete_category.after_invoke
+    @rename_channel.after_invoke
+    @move_channel.after_invoke
+    @import_channel.after_invoke
+    @hide_channel.after_invoke
+    @save_directory.after_invoke
+    @update.after_invoke
+    async def not_loading_update(self, ctx):
+        self.bot.univ.LoadingUpdate.remove(ctx.guild.id)
 
 
 def setup(bot: Bot):

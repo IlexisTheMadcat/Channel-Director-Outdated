@@ -60,8 +60,9 @@ class Events(Cog):
                     pass
                 else:
                     async with dchannel.typing():
+                        self.bot.univ.LoadingUpdate.append(channel.guild.id)
                         await self.bot.update_directory(channel, note="Updated automatically following channel deletion by user.")
-                    self.bot.univ.LoadingUpdate.remove(channel.guild.id)
+                        self.bot.univ.LoadingUpdate.remove(channel.guild.id)
 
     @Cog.listener()
     async def on_message(self, msg):
