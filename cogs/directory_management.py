@@ -185,8 +185,25 @@ Do you want to attempt to load it?
 `[❎] (=================)`
 """)
                             await sleep(2)
-                            await msg.edit(content="Okay, I canceled the operation.")
-                            
+                            await msg.clear_reactions()
+
+                            await msg.edit(content="Setting up now...")
+                            cat = await ctx.guild.create_category("CDR: Directories (Bot Managed)")
+                            directory = await cat.create_text_channel("directory",
+                                                                      topic="Managers: Leave this channel on top for easy access. Also do not delete it.")
+
+                            await directory.set_permissions(ctx.guild.default_role, send_messages=False)
+                            member_self = await ctx.guild.fetch_member(self.bot.user.id)
+                            await directory.set_permissions(member_self, send_messages=True)
+
+                            dmessage = await directory.send(
+                                "This channel will have a directory under it when you create a channel using the special command that I provide to you.\nAlso, make sure I have access to all channels added.\nYou are free to move this channel, but it's best to leave on top.")
+                            await msg.edit(content=f"Finished setup. Get to the directory here: {directory.mention}")
+
+                            self.bot.univ.Directories.update(
+                                {ctx.guild.id: {"categoryID": cat.id, "channelID": directory.id,
+                                                "msgID": dmessage.id, "tree": {"root": {}}}})
+
                             return self.bot.univ.LoadingUpdate.remove(ctx.guild.id)
 
                         await msg.edit(content="""
