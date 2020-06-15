@@ -35,7 +35,8 @@ class Commands(Cog):
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.send("Wait a second, you impatient being!")
+            await ctx.message.delete()
+            await ctx.send("Wait a second, you impatient being!", delete_after=5)
             return
         else:
             self.bot.univ.LoadingUpdate.append(ctx.guild.id)
@@ -277,7 +278,8 @@ Do you want to attempt to load it?
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.send("Wait a second, you impatient being!")
+            await ctx.message.delete()
+            await ctx.send("Wait a second, you impatient being!", delete_after=5)
             return
         else:
             self.bot.univ.LoadingUpdate.append(ctx.guild.id)
@@ -435,7 +437,8 @@ Confirm: You are deleting an external category.
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.send("Wait a second, you impatient being!")
+            await ctx.message.delete()
+            await ctx.send("Wait a second, you impatient being!", delete_after=5)
             return
         else:
             self.bot.univ.LoadingUpdate.append(ctx.guild.id)
@@ -504,7 +507,8 @@ Confirm: You are deleting an external category.
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.send("Wait a second, you impatient being!")
+            await ctx.message.delete()
+            await ctx.send("Wait a second, you impatient being!", delete_after=5)
             return
         else:
             self.bot.univ.LoadingUpdate.append(ctx.guild.id)
@@ -553,7 +557,8 @@ Confirm: You are deleting an external category.
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.send("Wait a second, you impatient being!")
+            await ctx.message.delete()
+            await ctx.send("Wait a second, you impatient being!", delete_after=5)
             return
         else:
             self.bot.univ.LoadingUpdate.append(ctx.guild.id)
@@ -611,6 +616,7 @@ Confirm: You are deleting an external category.
                 note=f"Deleted category; Name: \"{name}\"; Path: \"{directory}\"."
             )
             print(f"- Deleted category from server \"{ctx.guild.name}\".")
+            return self.bot.univ.LoadingUpdate.remove(ctx.guild.id)
 
     @command(aliases=["rn_ch"])
     @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
@@ -621,7 +627,8 @@ Confirm: You are deleting an external category.
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.send("Wait a second, you impatient being!")
+            await ctx.message.delete()
+            await ctx.send("Wait a second, you impatient being!", delete_after=5)
             return
         else:
             self.bot.univ.LoadingUpdate.append(ctx.guild.id)
@@ -652,6 +659,7 @@ Confirm: You are deleting an external category.
                 else:
                     await self.bot.update_directory(ctx=ctx, note=f"Renamed channel \"{name}\" to \"{rename}\" in path \"{directory}\".")
                     print(f"= Renamed a channel for server \"{ctx.guild.name}\".")
+                    return self.bot.univ.LoadingUpdate.remove(ctx.guild.id)
             else:
                 await ctx.send(
                     f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
@@ -668,7 +676,8 @@ Confirm: You are deleting an external category.
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.send("Wait a second, you impatient being!")
+            await ctx.message.delete()
+            await ctx.send("Wait a second, you impatient being!", delete_after=5)
             return
         else:
             self.bot.univ.LoadingUpdate.append(ctx.guild.id)
@@ -711,6 +720,7 @@ Confirm: You are deleting an external category.
                     await self.bot.update_directory(ctx=ctx,
                                                     note=f"Moved channel \"{name}\" from path \"{directory}\" to \"{new_directory}\".")
                     print(f"= Moved a channel for server \"{ctx.guild.name}\".")
+                    return self.bot.univ.LoadingUpdate.remove(ctx.guild.id)
             else:
                 await ctx.send(
                     f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
@@ -727,7 +737,8 @@ Confirm: You are deleting an external category.
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.send("Wait a second, you impatient being!")
+            await ctx.message.delete()
+            await ctx.send("Wait a second, you impatient being!", delete_after=5)
             return
         else:
             self.bot.univ.LoadingUpdate.append(ctx.guild.id)
@@ -768,6 +779,7 @@ Confirm: You are deleting an external category.
 
                 await self.bot.update_directory(ctx=ctx, note=f"Imported channel with name \"{name}\"; Path: \"{new_directory}\".")
                 print(f"> Imported channel into directory for server \"{ctx.guild.name}\".")
+                return self.bot.univ.LoadingUpdate.remove(ctx.guild.id)
 
             else:
                 await ctx.send(
@@ -785,7 +797,8 @@ Confirm: You are deleting an external category.
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.send("Wait a second, you impatient being!")
+            await ctx.message.delete()
+            await ctx.send("Wait a second, you impatient being!", delete_after=5)
             return
         else:
             self.bot.univ.LoadingUpdate.append(ctx.guild.id)
@@ -811,6 +824,7 @@ Confirm: You are deleting an external category.
 
                 await self.bot.update_directory(ctx=ctx, note=f"Removed channel from directory, but was not deleted. Name: \"{name}\"; From Path: \"{directory}\".")
                 print(f"< Hidden channel from directory for server \"{ctx.guild.name}\".")
+                return self.bot.univ.LoadingUpdate.remove(ctx.guild.id)
             else:
                 await ctx.send(
                     f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
@@ -826,7 +840,8 @@ Confirm: You are deleting an external category.
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.send("Wait a second, you impatient being!")
+            await ctx.message.delete()
+            await ctx.send("Wait a second, you impatient being!", delete_after=5)
             return
         else:
             self.bot.univ.LoadingUpdate.append(ctx.guild.id)
@@ -850,6 +865,7 @@ Confirm: You are deleting an external category.
                            f"Use the command `{self.bot.command_prefix}setup` and attach the file to load it.",
                            file=file)
             print(f"|| Sent file data from directory to server \"{ctx.guild.name}\".")
+            return self.bot.univ.LoadingUpdate.remove(ctx.guild.id)
         else:
             await ctx.send(
                 f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
@@ -863,7 +879,8 @@ Confirm: You are deleting an external category.
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.send("Wait a second, you impatient being!")
+            await ctx.message.delete()
+            await ctx.send("Wait a second, you impatient being!", delete_after=5)
             return
         else:
             self.bot.univ.LoadingUpdate.append(ctx.guild.id)
@@ -876,6 +893,7 @@ Confirm: You are deleting an external category.
                 return self.bot.univ.LoadingUpdate.remove(ctx.guild.id)
 
             await self.bot.update_directory(ctx=ctx, note="Update requested manually.")
+            return self.bot.univ.LoadingUpdate.remove(ctx.guild.id)
         else:
             await ctx.send(
                 f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
