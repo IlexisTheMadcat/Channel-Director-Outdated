@@ -1,4 +1,5 @@
 # Lib
+from contextlib import suppress
 from os import remove
 from asyncio import TimeoutError, sleep
 from pickle import Unpickler, dump
@@ -92,6 +93,8 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                                                    "Note: Your old channels will not be deleted, but the old directory channel will not be kept updated or managed anymore.\n"
                                                    "`[✅] (=================)`"
                                            )
+                            with suppress(Exception):
+                                await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"]).edit(name="[❎] Directory Archive")
 
                         elif str(reaction.emoji) == "🔄":
                             await msg.edit(content="You already have a directory tree set up. Continue anyway?\n"
@@ -219,7 +222,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
 
                                 remove(f"{self.bot.cwd}/Workspace/incoming.pkl")
 
-                                cat = await ctx.guild.create_category("CDR: Directories (Bot Managed)")
+                                cat = await ctx.guild.create_category("Directory Archive")
                                 directory = await cat.create_text_channel("directory",
                                                                           topic="Managers: Leave this channel on top for easy access. Also do not delete it.")
 
