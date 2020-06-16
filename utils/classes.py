@@ -364,7 +364,6 @@ class Bot(DiscordBot):
                         lines: List[str],
                         depth: int = 1,
                         category: str = "Root Category:",
-                        channel_count: int = 0
                 ):
                     """Recursively walk bot.Directories for guild and generate
                     a list of strings representing the directory message"""
@@ -382,7 +381,6 @@ class Bot(DiscordBot):
                                 return d
 
                             else:
-                                channel_count = channel_count + 1
                                 lines.append(f"{'ーー' * depth} **[** {key} **>>>** ||{channel.mention}||")
 
                         elif isinstance(val, dict):
@@ -392,8 +390,6 @@ class Bot(DiscordBot):
                             if isinstance(ret, dict):
                                 d[key] = ret
                                 return d
-
-                    lines.append(f"\n**Total channels: [ {channel_count}]**")
 
                     return True
 
@@ -407,7 +403,6 @@ class Bot(DiscordBot):
                         continue
 
                     else:
-
                         if not list(self.univ.Directories[ctx.guild.id]["tree"]["root"].items()):
                             await directory_msg.edit(
                                 content="This channel will have a directory under it when you create "
