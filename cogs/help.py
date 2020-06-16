@@ -78,6 +78,9 @@ To send notifications/messages for warnings, confirmations, etc.
 
 "Attach Files"
 To send the requested file from the command {BOT_PREFIX}save_directory.
+
+"Add Reactions"
+To add buttons for your convenience while setting up or tearing down.
 ```
 To see important announcements and command changes, Type and enter `{BOT_PREFIX}help updates`
 Use this if you think a command isn't working the same way it did last time you used it.
@@ -91,13 +94,16 @@ Type `{BOT_PREFIX}help <directory>`, where `directory` is one of the following:
 """
 
         elif section.lower() == "details":
-            owner = await self.bot.fetch_user(self.bot.owner_id)
+            owners = [self.bot.get_user(uid).mention for uid in self.bot.owner_ids]
+            owners = '\n'.join(owners)
             em.description = f"""
 **Details:**
 Command prefix: `{BOT_PREFIX}`
 Create a custom directory to better organize your channels.
 
-This bot was created by: {owner.name+"#"+owner.discriminator}
+This bot was created by:
+{owners}
+
 Support Server invite: https://discord.gg/j2y7jxQ
 Warning: Support server may contain swearing in open channels.
 *Consider DMing the developer instead for questions/information.
