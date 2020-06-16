@@ -418,15 +418,15 @@ class Admin(Cog):
                                          f"**Attach a file named \"changelog.txt\".**"
                         em.color = 0xFF0000
 
-                else:
-                    if not file:
-                        em.description = f"Enter `{self.bot.command_prefix}help updates` to view the changelog.\n" \
-                                         f"Attach a file named \"changelog.txt\"."
-                        em.color = 0x0000FF
-                    else:
+                    elif file:
                         await file.save(f"{self.bot.cwd}/changelog.txt")
                         em.description = f"Changelog file set."
-                        em.color = 0x0000FF
+                        em.color = 0x00FF00
+
+                else:
+                    em.description = f"Enter `{self.bot.command_prefix}help updates` to view the changelog.\n" \
+                                     f"Attach a file named \"changelog.txt\"."
+                    em.color = 0x0000FF
 
             else:
                 em.description = f"Bot configuration option not found."
