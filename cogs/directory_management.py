@@ -255,7 +255,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                             await msg.clear_reactions()
 
                             await msg.edit(content="Setting up now...")
-                            cat = await ctx.guild.create_category("CDR: Directories (Bot Managed)")
+                            cat = await ctx.guild.create_category("Directory Archive")
                             directory = await cat.create_text_channel("directory",
                                                                       topic="Managers: Leave this channel on top for easy access. Also do not delete it.")
 
@@ -349,6 +349,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
         
                             for i in category.channels:
                                 await i.delete()
+                                await sleep(0.1)
         
                             await category.delete()
         

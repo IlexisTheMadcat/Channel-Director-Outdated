@@ -2,9 +2,11 @@
 # Lib
 
 # Site
+from asyncio import sleep
 from contextlib import suppress
 
 from discord.channel import CategoryChannel
+from discord.ext.commands import cooldown
 from discord.ext.commands.context import Context
 from discord.ext.commands.cog import Cog
 from discord.ext.commands.errors import (
@@ -27,19 +29,10 @@ class Events(Cog):
 
     @Cog.listener()
     async def on_guild_channel_delete(self, channel):
-        if isinstance(channel, CategoryChannel):
-            if channel.guild.id not in self.bot.univ.LoadingUpdate and channel.id == self.bot.univ.Directories[channel.guild.id]["categoryID"]:
-                self.bot.univ.Directories.pop(channel.guild.id)
-
-                ch = channel.guild.system_channel
-                if ch:
-                    with suppress(Forbidden):
-                        await ch.send(f":anger: Awe, what a mess! Someone messed up my directory! Next time, PLEASE use the command `{self.bot.command_prefix}teardown` that I provided you to teardown the directories appropriately. Unfortunately I can't delete all the channels that have been disorganized!")
-            else:
-                pass
-
-        elif channel.guild.id not in self.bot.univ.LoadingUpdate:
-            await self.bot.update_directory(channel, note="Updated automatically following channel deletion by user.")
+        if channel.guild.id not in self.bot.univ.LoadingUpdate:
+            with lu_cm(self.bot, channel.guild.id):
+                await sleep(5)
+                await self.bot.update_directory(channel, note="Updated automatically following channel deletion by user.")
 
     @Cog.listener()
     async def on_message(self, msg):
