@@ -2,7 +2,7 @@
 
 # Lib
 from contextlib import suppress
-from os import popen
+from os import popen, remove
 from os.path import exists, join
 from pickle import dump
 from copy import deepcopy
@@ -333,10 +333,9 @@ class Admin(Cog):
 
     @is_owner()
     @command(name="config", aliases=["bot"])
-
-    async def settings(self, ctx, option = None, new_value = None):
-
+    async def settings(self, ctx, option=None, new_value=None):
         """Manage Bot settings"""
+
         em = Embed(title="Administration: Config", description="Description not set.", color=0x000000)
         if option:
             if option == "auto_pull":
@@ -405,6 +404,30 @@ class Admin(Cog):
                     em.description = f"The current value for {option} is:\n`{self.bot.command_prefix}`"
                     em.color = 0x0000FF
 
+            elif option == "changelog":
+                file = None
+                em.color = 0x00FF00
+                if ctx.message.attachments:
+                    for i in ctx.message.attachments:
+                        if i.filename == f"changelog.txt":
+                            file = i
+                            break
+
+                    if not file:
+                        em.description = f"Enter `{self.bot.command_prefix}help updates` to view the changelog.\n" \
+                                         f"**Attach a file named \"changelog.txt\".**"
+                        em.color = 0xFF0000
+
+                else:
+                    if not file:
+                        em.description = f"Enter `{self.bot.command_prefix}help updates` to view the changelog.\n" \
+                                         f"Attach a file named \"changelog.txt\"."
+                        em.color = 0x0000FF
+                    else:
+                        await file.save(f"{self.bot.cwd}/changelog.txt")
+                        em.description = f"Changelog file set."
+                        em.color = 0x0000FF
+
             else:
                 em.description = f"Bot configuration option not found."
                 em.color = 0x000000
@@ -414,7 +437,8 @@ class Admin(Cog):
                              f"```debug_mode: {self.bot.debug_mode}\n" \
                              f"auto_pull: {self.bot.auto_pull}\n" \
                              f"tz: {self.bot.tz}\n" \
-                             f"prefix: {self.bot.command_prefix}```"
+                             f"prefix: {self.bot.command_prefix}\n" \
+                             f"changelog: Not shown here```"
             em.color = 0x0000FF
 
         await ctx.send(embed=em)
@@ -440,7 +464,7 @@ class Admin(Cog):
             except Exception as e:
                 await ctx.send(f"[Unable to save; Data Reset] Pickle dumping Error: {e}")
 
-        with suppress(Exception):  # Comment this out and unindent logout() to disable suppressing
+        with suppress(Exception):
             await self.bot.logout()
 
 

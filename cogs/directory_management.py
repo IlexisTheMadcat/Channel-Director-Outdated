@@ -94,7 +94,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                                                    "`[✅] (=================)`"
                                            )
                             with suppress(Exception):
-                                await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"]).edit(name="[❎] Directory Archive")
+                                await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"]).edit(name="[❌] Directory Archive")
 
                         elif str(reaction.emoji) == "🔄":
                             await msg.edit(content="You already have a directory tree set up. Continue anyway?\n"
@@ -183,7 +183,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                                     await msg.clear_reactions()
 
                                     await msg.edit(content="Setting up now...")
-                                    cat = await ctx.guild.create_category("CDR: Directories (Bot Managed)")
+                                    cat = await ctx.guild.create_category("Directory Archive")
                                     directory = await cat.create_text_channel("directory",
                                                                               topic="Managers: Leave this channel on top for easy access. Also do not delete it.")
 
