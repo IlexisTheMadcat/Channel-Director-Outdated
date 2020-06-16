@@ -295,6 +295,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                 if categoryID == 0:
                     if ctx.guild.id in self.bot.univ.Directories.keys():
                         if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
+                            await ctx.message.delete()
                             await ctx.send("You can't do that here!", delete_after=5)
 
                             return

@@ -1,6 +1,10 @@
 # Lib
+from os import stat
+from datetime import datetime
 
 # Site
+from os.path import exists
+
 from discord import Embed, Permissions, AppInfo
 from discord.ext import commands
 from discord.ext.commands import Context, command
@@ -83,6 +87,7 @@ Use this if you think a command isn't working the same way it did last time you 
 Type `{BOT_PREFIX}help <directory>`, where `directory` is one of the following:
 **Details**
 **Commands**
+**Updates**
 """
 
         elif section.lower() == "details":
@@ -99,6 +104,26 @@ Warning: Support server may contain swearing in open channels.
 
 Number of servers this bot is in now: {len(self.bot.guilds)}
 :asterisk: Number of servers using the new directory system: {len(self.bot.univ.Directories.keys())}
+"""
+        elif section.lower() == "updates":
+            lastmodified = stat(f"{self.bot.cwd}/changelog.txt").st_mtime
+            lastmodified = datetime.fromtimestamp(lastmodified).strftime("%H:%M %m/%d/%Y")
+            if not exists(f"{self.bot.cwd}/changelog.txt"):
+                open("{self.bot.cwd}/changelog.txt", "w").close()
+
+            with open(f"{self.bot.cwd}/changelog.txt", "r") as f:
+                text = f.read()
+
+            if not text:
+                text = "No new updates."
+
+            em.description = f"""
+**Updates**
+__Here you will find important updates regarding command changes and announcements.__
+```
+Last updated: {lastmodified}
+{text}
+```
 """
             
         elif section.lower() == "commands":

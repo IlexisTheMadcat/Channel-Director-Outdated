@@ -13,7 +13,7 @@ from typing import List
 from dbl.client import DBLClient
 from dbl.errors import DBLException
 from discord.channel import TextChannel
-from discord.errors import HTTPException, NotFound
+from discord.errors import HTTPException, NotFound, Forbidden
 from discord.ext.commands.bot import Bot as DiscordBot
 from discord.ext.commands.context import Context
 from discord.ext.commands.converter import IDConverter
@@ -167,7 +167,6 @@ class Globals:
         self.Inactive = 0
         self.Loops = []
         self.LoadingUpdate = []
-        self.TearingDown = []
         self.Directories = {"guildID": {"catagoryID": 0, "channelID": 0, "msgID": 0, "tree": {}}}
         self.cwd = getcwd()
 
@@ -290,7 +289,7 @@ class Bot(DiscordBot):
         # 'directory' is the directory from the unpickled file attached.
         
         cat = self.get_channel(self.univ.Directories[ctx.guild.id]["categoryID"])
-        chan_directory = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
+        directory_ch = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
 
         async def recurse_convert_to_directory(d: dict, univ: Globals):
             """Recursively create new channels from directory dict"""
@@ -301,7 +300,7 @@ class Bot(DiscordBot):
                     d[key] = channel.id
                     await channel.edit(
                         name=f"{key}-{channel.id}",
-                        topic=f"Go back: {chan_directory.mention}; Name: {key}"
+                        topic=f"Go back: {directory_ch.mention}; Name: {key}"
                     )
                     await sleep(0.2)
 
@@ -311,58 +310,51 @@ class Bot(DiscordBot):
                 else:
                     raise TypeError("Invalid dictionary passed.")
 
-            
-
         await recurse_convert_to_directory(directory["root"], self.univ)
         return directory
 
     async def update_directory(self, ctx, note="..."):
-        """"""
-
+        """Update the directory associated with a guild"""
+        if ctx.guild.id not in self.univ.Directories.keys():
+            with suppress(Forbidden):
+                return await ctx.guild.system_channel.send("The directory will have to be set up again.") if ctx.guild.system_channel else None
+        
         # ctx must meet the requirements for accessing .guild and a Messageable
         
+        directory_cat = self.get_channel(self.univ.Directories[ctx.guild.id]["categoryID"])
+        directory_ch = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
 
-        try:
-            chan_directory = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
-
-        except NotFound:
-            try:
-                cat = self.get_channel(self.univ.Directories[ctx.guild.id]["categoryID"])
-
-            except NotFound:
-                self.univ.Directories.pop(ctx.guild.id)
-                return await ctx.send("You need to set up your directory again.")
-
-            chan_directory = await cat.create_text_channel(
-                "directory",
+        if not directory_cat:
+            directory_cat = await ctx.guild.create_category_channel(name="CDR: DIRECTORIES (BOT MANAGED)")
+        
+        if not directory_ch:
+            directory_ch = await directory_cat.create_text_channel(
+                name="directory",
                 topic="Managers: Leave this channel on top for easy access. "
                       "Feel free to move or rename it."
             )
-
-            self.univ.Directories[ctx.guild.id]["channelID"] = chan_directory.id
-            msg = await chan_directory.send("Completing repairs...")
-            self.univ.Directories[ctx.guild.id]["msgID"] = msg.id
+            directory_msg = await directory_ch.send("Completing repairs...")
 
         try:
-            msg = await chan_directory.fetch_message(self.univ.Directories[ctx.guild.id]["msgID"])
-            self.univ.Directories[ctx.guild.id]["msgID"] = msg.id
-
+            directory_msg = await directory_ch.fetch_message(self.univ.Directories[ctx.guild.id]["msgID"])
         except NotFound:
-            msg = await chan_directory.send("Completing repairs...")
-            self.univ.Directories[ctx.guild.id]["msgID"] = msg.id
+            directory_msg = await directory_ch.send("Completing repairs...")
 
-        async with chan_directory.typing():
+        self.univ.Directories[ctx.guild.id]["categoryID"] = directory_cat.id
+        self.univ.Directories[ctx.guild.id]["channelID"] = directory_ch.id
+        self.univ.Directories[ctx.guild.id]["msgID"] = directory_msg.id
+        
+        async with directory_ch.typing():
             if not list(self.univ.Directories[ctx.guild.id]["tree"]["root"].items()):
-                await msg.edit(
+                await directory_msg.edit(
                     content="This channel will have a directory under it when "
                             "you create a channel using the special command "
                             "that I provide to you.\n"
-                            "Also, make sure I have access to all channels "
-                            "added.\n"
+                            "Also, make sure I have access to all channels added.\n"
                             "You are free to move this channel, but it's best "
                             "to leave on top.\n"
                 )
-                return await chan_directory.send(f"Updated. `{note}`", delete_after=5)
+                return await directory_ch.send(f"Updated. `{note}`", delete_after=5)
 
             else:
 
@@ -402,8 +394,8 @@ class Bot(DiscordBot):
                     return True
 
                 while True:
-                    chan_directory = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
-                    msg = await chan_directory.fetch_message(self.univ.Directories[ctx.guild.id]["msgID"])
+                    directory_ch = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
+                    msg = await directory_ch.fetch_message(self.univ.Directories[ctx.guild.id]["msgID"])
 
                     message_lines = list()
 
@@ -415,7 +407,6 @@ class Bot(DiscordBot):
 
                     else:
 
-                        
                         if not list(self.univ.Directories[ctx.guild.id]["tree"]["root"].items()):
                             await msg.edit(
                                 content="This channel will have a directory under it when you create "
@@ -423,31 +414,31 @@ class Bot(DiscordBot):
                                         "Also, make sure I have access to all channels added.\n"
                                         "You are free to move this channel, but it's best to leave on top."
                             )
-                            await chan_directory.send(f"Updated. `{note}`", delete_after=10)
+                            await directory_ch.send(f"Updated. `{note}`", delete_after=10)
                             return
 
                         else:
                             message_full = "\n".join(message_lines)
                             try:
-                                message = await chan_directory.fetch_message(
+                                message = await directory_ch.fetch_message(
                                     self.univ.Directories[ctx.guild.id]["msgID"]
                                 )
 
                             except NotFound:
-                                message = await chan_directory.send("Completing...")
+                                message = await directory_ch.send("Completing...")
 
                             try:
                                 await message.edit(content=message_full)
-                                await chan_directory.send(f"Updated. `{note}`", delete_after=10)
+                                await directory_ch.send(f"Updated. `{note}`", delete_after=10)
                                 return
 
                             except HTTPException as e:
-                                await chan_directory.send(
+                                await directory_ch.send(
                                     ":exclamation: The directory message is too large to be edited. "
                                     "A fix will be implemented in the future.\n"
                                     "If this is not the case, it is likely a network or Discord error. "
                                     f"Please try again.\n`Error description: [{e}]`",
-                                    delete_after=20
+                                    delete_after=30
                                 )
                             return
 

@@ -2,6 +2,8 @@
 # Lib
 
 # Site
+from contextlib import suppress
+
 from discord.channel import CategoryChannel
 from discord.ext.commands.context import Context
 from discord.ext.commands.cog import Cog
@@ -16,6 +18,7 @@ from discord.errors import NotFound, Forbidden
 
 # Local
 from utils.classes import Bot
+from utils.directory_mgmt import LoadingUpdate_contextmanager as lu_cm
 
 
 class Events(Cog):
@@ -25,44 +28,18 @@ class Events(Cog):
     @Cog.listener()
     async def on_guild_channel_delete(self, channel):
         if isinstance(channel, CategoryChannel):
-            try:
-                if channel.guild.id not in self.bot.univ.TearingDown and channel.id == self.bot.univ.Directories[channel.guild.id]["categoryID"]:
-                    try:
-                        directory = await self.bot.fetch_channel(self.bot.univ.Directories[channel.guild.id]["channelID"])
-                    except NotFound:
-                        return
+            if channel.guild.id not in self.bot.univ.LoadingUpdate and channel.id == self.bot.univ.Directories[channel.guild.id]["categoryID"]:
+                self.bot.univ.Directories.pop(channel.guild.id)
 
-                    try:
-                        dmessage = await directory.fetch_message(self.bot.univ.Directories[channel.guild.id]["msgID"])
-                    except NotFound:
-                        await self.bot.update_directory(channel, note="Repaired directory message.")
-                        
-                    try: 
-                        await dmessage.edit(content="All channels have been disorganized!")
-                    except NotFound:
-                        pass
-                    
-                    self.bot.univ.Directories.pop(channel.guild.id)
-
-                    ch = channel.guild.system_channel
-                    if ch:
+                ch = channel.guild.system_channel
+                if ch:
+                    with suppress(Forbidden):
                         await ch.send(f":anger: Awe, what a mess! Someone messed up my directory! Next time, PLEASE use the command `{self.bot.command_prefix}teardown` that I provided you to teardown the directories appropriately. Unfortunately I can't delete all the channels that have been disorganized!")
-                else:
-                    pass
-
-            except KeyError or NotFound:
+            else:
                 pass
 
-        if channel.guild.id not in self.bot.univ.LoadingUpdate and channel.guild.id not in self.bot.univ.TearingDown:
-                try:
-                    dchannel = await self.bot.fetch_channel(self.bot.univ.Directories[channel.guild.id]["channelID"])
-                except NotFound:
-                    pass
-                else:
-                    async with dchannel.typing():
-                        self.bot.univ.LoadingUpdate.append(channel.guild.id)
-                        await self.bot.update_directory(channel, note="Updated automatically following channel deletion by user.")
-                        self.bot.univ.LoadingUpdate.remove(channel.guild.id)
+        elif channel.guild.id not in self.bot.univ.LoadingUpdate:
+            await self.bot.update_directory(channel, note="Updated automatically following channel deletion by user.")
 
     @Cog.listener()
     async def on_message(self, msg):
