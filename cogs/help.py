@@ -109,7 +109,7 @@ Warning: Support server may contain swearing in open channels.
 *Consider DMing the developer instead for questions/information.
 
 Number of servers this bot is in now: {len(self.bot.guilds)}
-:asterisk: Number of servers using the new directory system: {len(self.bot.univ.Directories.keys())}
+:asterisk: Number of servers using the new directory system: {len(self.bot.univ.Directories)}
 """
         elif section.lower() == "updates":
             lastmodified = stat(f"{self.bot.cwd}/changelog.txt").st_mtime

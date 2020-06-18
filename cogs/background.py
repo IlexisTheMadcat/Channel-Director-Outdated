@@ -114,7 +114,7 @@ class BackgroundTasks(Cog):
                     x_loop.cancel()
 
                 modules = {module.__module__: cog for cog, module in self.bot.cogs.items()}
-                for module in modules.keys():
+                for module in modules:
                     self.bot.reload_extension(module)
             else:
                 print(f'[CDR: {time}] Saved data. Auto-pull: No new changes.{" "*30}')

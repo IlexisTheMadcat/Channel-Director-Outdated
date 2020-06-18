@@ -4,16 +4,17 @@
 # Site
 from asyncio import sleep
 from contextlib import suppress
+from copy import deepcopy
 
 from discord.channel import CategoryChannel
 from discord.ext.commands import cooldown
 from discord.ext.commands.context import Context
 from discord.ext.commands.cog import Cog
 from discord.ext.commands.errors import (
-    BotMissingPermissions, 
-    MissingPermissions, 
-    CommandNotFound, 
-    MissingRequiredArgument, 
+    BotMissingPermissions,
+    MissingPermissions,
+    CommandNotFound,
+    MissingRequiredArgument,
     NotOwner
 )
 from discord.errors import NotFound, Forbidden
@@ -29,16 +30,31 @@ class Events(Cog):
 
     @Cog.listener()
     async def on_guild_channel_delete(self, channel):
-        if channel.guild.id not in self.bot.univ.LoadingUpdate:
+        if channel.guild.id not in self.bot.univ.LoadingUpdate and channel.guild.id in self.bot.univ.Directories:
             with lu_cm(self.bot, channel.guild.id):
                 await sleep(5)
+                catch_id = deepcopy(self.bot.univ.Directories[channel.guild.id]["categoryID"])
                 await self.bot.update_directory(channel, note="Updated automatically following channel deletion by user.")
+                if isinstance(channel, CategoryChannel) and channel.id == catch_id:
+                    async def recurse_move_channels(d: dict):
+                        for key, val in d.items():
+                            if isinstance(val, tuple):
+                                ch = self.bot.get_channel(val[0])
+                                dcategory = self.bot.get_channel(self.bot.univ.Directories[channel.guild.id]["categoryID"])
+                                if ch and not val[1]:
+                                    await ch.edit(category=dcategory)
+                            elif isinstance(val, dict):
+                                await recurse_move_channels(d[key])
+                            else:
+                                raise ValueError("Invalid directory dictionary passed.")
+
+                    await recurse_move_channels(self.bot.univ.Directories[channel.guild.id]["tree"])
 
     @Cog.listener()
     async def on_message(self, msg):
         if not msg.guild:
             return
-        
+
         if msg.author.id == self.bot.user.id:
             return
 
@@ -46,8 +62,8 @@ class Events(Cog):
         if verify_command.valid:
             self.bot.univ.Inactive = 0
             return
-        
-        if msg.guild.id in self.bot.univ.Directories.keys():
+
+        if msg.guild.id in self.bot.univ.Directories:
             if msg.channel.id == self.bot.univ.Directories[msg.guild.id]["channelID"]:
                 try:
                     await msg.delete()
@@ -82,12 +98,12 @@ class Events(Cog):
                     "That command is not listed in the help menu and is to be used by the owner only."
                 )
                 return
-            
+
             elif isinstance(error, MissingRequiredArgument):
                 await ctx.message.delete()
                 await msg.author.send(f"\"{error.param.name}\" is a required argument that is missing.")
                 return
-        
+
             elif isinstance(error, CommandNotFound):
                 supposed_command = msg.content.split()[0]
                 await ctx.message.delete()
@@ -101,7 +117,7 @@ class Events(Cog):
                     f"teardown the directory, and to make new channels."
                 )
                 return
-            
+
             else:
                 if ctx.command.name is not None:
                     await ctx.author.send(

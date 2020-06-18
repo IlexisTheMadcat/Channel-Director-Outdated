@@ -99,7 +99,7 @@ class REPL(Cog):
     @is_owner()
     @env.command(name='list')
     async def _list(self, ctx: Context) -> None:
-        if len(self._env_store.keys()):
+        if len(self._env_store):
             emb = Embed(title='Environment Store List', color=Colour.green())
             for k, v in self._env_store.items():
                 emb.add_field(name=k, value=repr(v))

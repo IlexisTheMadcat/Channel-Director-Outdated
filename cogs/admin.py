@@ -47,7 +47,7 @@ class Admin(Cog):
         Use without subcommand to list currently loaded modules"""
 
         modules = {module.__module__: cog for cog, module in self.bot.cogs.items()}
-        space = len(max(modules.keys(), key=len))
+        space = len(max(modules, key=len))
 
         fmt = "\n".join([f"{module}{' ' * (space - len(module))} : {cog}" for module, cog in modules.items()])
 
