@@ -29,10 +29,24 @@ class Events(Cog):
 
     @Cog.listener()
     async def on_guild_channel_delete(self, channel):
-        if channel.guild.id not in self.bot.univ.LoadingUpdate:
+        if channel.guild.id not in self.bot.univ.LoadingUpdate and channel.guild.id in self.bot.univ.Directories:
             with lu_cm(self.bot, channel.guild.id):
                 await sleep(5)
                 await self.bot.update_directory(channel, note="Updated automatically following channel deletion by user.")
+                if isinstance(channel, CategoryChannel) and channel.id == self.bot.univ.Directories[channel.guild.id]["categoryID"]:
+                    async def recurse_move_channels(d: dict):
+                        for key, val in d.items():
+                            if isinstance(val, tuple):
+                                ch = self.bot.get_channel(val[0])
+                                dcategory = self.bot.get_channel(self.bot.univ.Directories[channel.guild.id]["categoryID"])
+                                if ch and not val[1]:
+                                    await ch.edit(category=dcategory)
+                            elif isinstance(val, dict):
+                                await recurse_move_channels(d[key])
+                            else:
+                                raise ValueError("Invalid directory dictionary passed.")
+
+                    await recurse_move_channels(self.bot.univ.Directories[channel.guild.id]["tree"])
 
     @Cog.listener()
     async def on_message(self, msg):
@@ -47,7 +61,7 @@ class Events(Cog):
             self.bot.univ.Inactive = 0
             return
         
-        if msg.guild.id in self.bot.univ.Directories.keys():
+        if msg.guild.id in self.bot.univ.Directories:
             if msg.channel.id == self.bot.univ.Directories[msg.guild.id]["channelID"]:
                 try:
                     await msg.delete()

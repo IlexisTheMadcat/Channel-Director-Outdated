@@ -7,7 +7,7 @@ from os import getcwd
 from os.path import exists
 from pickle import dump, Unpickler
 from re import match
-from typing import List
+from typing import List, Tuple
 
 # Site
 from dbl.client import DBLClient
@@ -264,14 +264,14 @@ class Bot(DiscordBot):
     # It is advised to use update_directory(ctx) first.
     # 'ctx' must meet the requirements for getting .guild and its directory.
     async def convert_to_readable(self, ctx: Context):
-        """Replaces all channel IDs `int` with `None`"""
+        """Replaces all channel IDs `tuple` with `None`"""
 
         await self.update_directory(ctx=ctx, note=f"Updated to create download file.")
         directory = deepcopy(self.univ.Directories[ctx.guild.id]["tree"])
 
         def recurse_convert_to_readable(d: dict):
             for key, val in d.items():
-                if isinstance(val, int):
+                if isinstance(val, tuple):
                     d[key] = None
                 elif isinstance(val, dict):
                     recurse_convert_to_readable(d[key])
@@ -297,7 +297,7 @@ class Bot(DiscordBot):
             for key, val in d.items():
                 if val is None:
                     channel = await cat.create_text_channel("finishing creation...")
-                    d[key] = channel.id
+                    d[key] = (channel.id, False)
                     await channel.edit(
                         name=f"{key}-{channel.id}",
                         topic=f"Go back: {directory_ch.mention}; Name: {key}"
@@ -315,7 +315,7 @@ class Bot(DiscordBot):
 
     async def update_directory(self, ctx, note="..."):
         """Update the directory associated with a guild"""
-        if ctx.guild.id not in self.univ.Directories.keys():
+        if ctx.guild.id not in self.univ.Directories:
             with suppress(Forbidden):
                 return
         
@@ -345,6 +345,7 @@ class Bot(DiscordBot):
             self.univ.Directories[ctx.guild.id]["msgID"] = directory_msg.id
 
         async with directory_ch.typing():
+            await sleep(1)
             if not list(self.univ.Directories[ctx.guild.id]["tree"]["root"].items()):
                 await sleep(2)
                 await directory_msg.edit(
@@ -372,16 +373,21 @@ class Bot(DiscordBot):
                     lines.append(category)
 
                     for key, val in d.items():
+                        if isinstance(val, int):  # Retro-patching
+                            d[key] = Tuple[(val, False)]
 
-                        if isinstance(val, int):
-                            channel = bot.get_channel(val)
+                        if isinstance(val, tuple):
+                            channel = bot.get_channel(val[0])
 
                             if channel is None:
                                 d.pop(key)
                                 return d
 
                             else:
-                                lines.append(f"{'ーー' * depth} **[** {key} **>>>** ||{channel.mention}||")
+                                if val[1]:
+                                    lines.append(f"{'ーー' * depth} **[i] [** {key} **>>>** ||{channel.mention}||")
+                                else:
+                                    lines.append(f"{'ーー' * depth} **[** {key} **>>>** ||{channel.mention}||")
 
                         elif isinstance(val, dict):
                             category = f"**{'ーー' * depth} Category: [** {key} **]**"

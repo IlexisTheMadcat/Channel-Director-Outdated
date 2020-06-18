@@ -5,6 +5,7 @@ from asyncio import TimeoutError, sleep
 from pickle import Unpickler, dump
 
 # Site
+from discord import TextChannel
 from discord.ext.commands.cog import Cog
 from discord.ext.commands.context import Context
 from discord.ext.commands.core import bot_has_permissions, command, has_permissions
@@ -42,12 +43,13 @@ class Commands(Cog):
         else:
             with lu_cm(self.bot, ctx.guild.id):
 
-                if ctx.guild.id in self.bot.univ.Directories.keys():
-                    msg = await ctx.send("""
-You already have a directory tree set up. Continue anyway?
-Note: Your old channels will not be deleted, but the old directory channel will not be kept updated or managed anymore.
-`[  ] (within 30 seconds)`
-""")
+                if ctx.guild.id in self.bot.univ.Directories:
+                    msg = await ctx.send("You already have a directory tree set up. Continue anyway?\n"
+                                         "Note: Your old channels will not be deleted, but the old directory channel will not be kept updated or managed anymore.\n"
+                                         "*The restart button **will** teardown the old directory for you.*\n"
+                                         "`[  ] (within 30 seconds)`"
+                                         )
+
                     await msg.add_reaction("✅")
                     await msg.add_reaction("❎")
                     await msg.add_reaction("🔄")
@@ -63,7 +65,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
 
                 def check(reaction, user):
                     emj = ["✅", "❎"]
-                    if ctx.guild.id in self.bot.univ.Directories.keys():
+                    if ctx.guild.id in self.bot.univ.Directories:
                         emj.append("🔄")
                     return str(reaction.emoji) in emj and user == ctx.author and reaction.message.id == msg.id
 
@@ -76,10 +78,11 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                     return
                 else:
                     await reaction.remove(user)
-                    if ctx.guild.id in self.bot.univ.Directories.keys():
+                    if ctx.guild.id in self.bot.univ.Directories:
                         if str(reaction.emoji) == "❎":
                             await msg.edit(content="You already have a directory tree set up. Continue anyway?\n"
                                                    "Note: Your old channels will not be deleted, but the old directory channel will not be kept updated or managed anymore.\n"
+                                                   "*The restart button **will** teardown the old directory for you.*\n"
                                                    "`[❎] (=================)`"
                                            )
                             await msg.clear_reactions()
@@ -91,6 +94,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                         elif str(reaction.emoji) == "✅":
                             await msg.edit(content="You already have a directory tree set up. Continue anyway?\n"
                                                    "Note: Your old channels will not be deleted, but the old directory channel will not be kept updated or managed anymore.\n"
+                                                   "*The restart button **will** teardown the old directory for you.*\n"
                                                    "`[✅] (=================)`"
                                            )
                             with suppress(Exception):
@@ -99,6 +103,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                         elif str(reaction.emoji) == "🔄":
                             await msg.edit(content="You already have a directory tree set up. Continue anyway?\n"
                                                    "Note: Your old channels will not be deleted, but the old directory channel will not be kept updated or managed anymore.\n"
+                                                   "*The restart button **will** teardown the old directory for you.*\n"
                                                    "`[🔄] (=================)`"
                                            )
 
@@ -144,10 +149,10 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                                            )
                     await msg.clear_reactions()
                     await sleep(2)
-                    if ctx.guild.id in self.bot.univ.Directories.keys():
+                    if ctx.guild.id in self.bot.univ.Directories:
                         self.bot.univ.Directories.pop(ctx.guild.id)
 
-                    if ctx.guild.id not in self.bot.univ.Directories.keys():
+                    if ctx.guild.id not in self.bot.univ.Directories:
                         if ctx.message.attachments:
                             file = None
                             for i in ctx.message.attachments:
@@ -296,7 +301,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
             with lu_cm(self.bot, ctx.guild.id):
 
                 if categoryID == 0:
-                    if ctx.guild.id in self.bot.univ.Directories.keys():
+                    if ctx.guild.id in self.bot.univ.Directories:
                         if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                             await ctx.message.delete()
                             await ctx.send("You can't do that here!", delete_after=5)
@@ -362,13 +367,13 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                     else:
                         await ctx.send("You don't have a directory to tear down.")
                 else:
-                    if ctx.guild.id in self.bot.univ.Directories.keys() and ctx.channel.id == \
+                    if ctx.guild.id in self.bot.univ.Directories and ctx.channel.id == \
                             self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                         await ctx.send("You can't do that here!", delete_after=5)
                         
                         return
         
-                    if ctx.guild.id in self.bot.univ.Directories.keys() and categoryID == \
+                    if ctx.guild.id in self.bot.univ.Directories and categoryID == \
                             self.bot.univ.Directories[ctx.guild.id]["categoryID"]:
                         await ctx.send(
                             "You cannot specify the external category used for the directory. In that case, don't specify any ID.",
@@ -435,7 +440,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
         
                         await msg.edit(
                             content="Teardown complete. Note that imported channels from that directory will no longer appear in the directory if you have it set up.")
-                        if ctx.guild.id in self.bot.univ.Directories.keys():
+                        if ctx.guild.id in self.bot.univ.Directories:
                             await self.bot.update_directory(ctx=ctx,
                                                             note="External category deletion; Imported channels from that category now removed.")
                         
@@ -456,7 +461,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
         else:
             with lu_cm(self.bot, ctx.guild.id):
 
-                if ctx.guild.id in self.bot.univ.Directories.keys():
+                if ctx.guild.id in self.bot.univ.Directories:
                     if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                         await ctx.message.delete()
 
@@ -483,7 +488,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                                 if isinstance(get_item, int):
                                     raise KeyError(str(d[-1]))
                                 else:
-                                    if name in get_item.keys():
+                                    if name in get_item:
                                         await ctx.send("A channel or category in that directory already exists.", delete_after=5)
                                         return
 
@@ -492,7 +497,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                                     channel = await category.create_text_channel(f"finishing-creation", topic=f"Go back: {dchannel.mention}; Name: \"{name}\"")
                                     await channel.edit(name=str(f"{name}-{channel.id}"))
 
-                                    get_item.update({name: channel.id})
+                                    get_item[name] = (channel.id, False)
 
                             except KeyError as e:
                                 await ctx.send(
@@ -506,6 +511,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                     else:
                         await ctx.send(
                             f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
+                        return
                 else:
                     await ctx.send(
                         f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
@@ -526,7 +532,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
         else:
             with lu_cm(self.bot, ctx.guild.id):
 
-                if ctx.guild.id in self.bot.univ.Directories.keys():
+                if ctx.guild.id in self.bot.univ.Directories:
                     if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                         await ctx.message.delete()
 
@@ -546,11 +552,12 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                             if isinstance(get_item, int):
                                 raise KeyError(str(d[-1]))
                             else:
-                                if name in get_item.keys():
+                                if name in get_item:
                                     await ctx.send("A channel or category in that directory already exists.",
                                                    delete_after=5)
                                     return
-                                get_item.update({name: {}})
+
+                                get_item[name] = dict()
 
                             await self.bot.update_directory(ctx=ctx, note=f"New category; Name: \"{name}\"; Path: \"{directory}\".")
                             print(f"+ Added new category to server \"{ctx.guild.name}\".")
@@ -576,7 +583,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
         else:
             with lu_cm(self.bot, ctx.guild.id):
 
-                if ctx.guild.id not in self.bot.univ.Directories.keys():
+                if ctx.guild.id not in self.bot.univ.Directories:
                     await ctx.send(
                         f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one."
                     )
@@ -646,7 +653,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
         else:
             with lu_cm(self.bot, ctx.guild.id):
 
-                if ctx.guild.id in self.bot.univ.Directories.keys():
+                if ctx.guild.id in self.bot.univ.Directories:
                     if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                         await ctx.message.delete()
 
@@ -660,9 +667,9 @@ Note: Your old channels will not be deleted, but the old directory channel will 
 
                         try:
                             get_item[rename] = get_item.pop(name)
-                            if isinstance(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][rename], int):
+                            if isinstance(get_item[rename], int):
                                 dchannel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
-                                channel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["tree"][d[0]][rename])
+                                channel = self.bot.get_channel(get_item[rename])
                                 await channel.edit(topic=f"Go back: {dchannel.mention}; Name: \"{rename}\"")
 
                         except KeyError as e:
@@ -695,7 +702,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
         else:
             with lu_cm(self.bot, ctx.guild.id):
 
-                if ctx.guild.id in self.bot.univ.Directories.keys():
+                if ctx.guild.id in self.bot.univ.Directories:
                     if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                         await ctx.message.delete()
 
@@ -710,7 +717,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                         get_new_item = recurse_index(self.bot.univ.Directories[ctx.guild.id]['tree'], D)
 
                         try:
-                            if name not in self.bot.univ.Directories[ctx.guild.id]["tree"][D[0]].keys():
+                            if name not in self.bot.univ.Directories[ctx.guild.id]["tree"][D[0]]:
                                 Branch = get_item.pop(name)
                             else:
                                 await ctx.send(
@@ -744,7 +751,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
     @command(aliases=["imp_ch"])
     @bot_has_permissions(send_messages=True, manage_messages=True)
     @has_permissions(manage_channels=True)
-    async def import_channel(self, ctx, channel, new_directory, name):
+    async def import_channel(self, ctx, channel: TextChannel, new_directory, name):
         if not ctx.guild:
             await ctx.send("This command cannot be used in a DM channel.")
             return
@@ -756,30 +763,17 @@ Note: Your old channels will not be deleted, but the old directory channel will 
         else:
             with lu_cm(self.bot, ctx.guild.id):
 
-                if ctx.guild.id in self.bot.univ.Directories.keys():
+                if ctx.guild.id in self.bot.univ.Directories:
                     if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                         await ctx.message.delete()
-                        if channel.startswith("<#") and channel.endswith(">"):
-                            channel = channel.replace("<#", "")
-                            channel = channel.replace(">", "")
-
-                        try:
-                            channel = int(channel)
-                            channel = self.bot.get_channel(channel)
-                            if channel is None:
-                                raise ValueError
-
-                        except ValueError:
-                            await ctx.send("Please mention a valid channel or provide its ID.", delete_after=5)
-                            return
 
                         d = new_directory.split("//")
 
                         get_item = recurse_index(self.bot.univ.Directories[ctx.guild.id]['tree'], d)
 
                         try:
-                            if name not in get_item.keys():
-                                get_item[name] = channel
+                            if name not in get_item:
+                                get_item[name] = (channel.id, True)
                             else:
                                 await ctx.send(
                                     "The destination directory already has a channel or category with the same name.",
@@ -816,7 +810,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
         else:
             with lu_cm(self.bot, ctx.guild.id):
 
-                if ctx.guild.id in self.bot.univ.Directories.keys():
+                if ctx.guild.id in self.bot.univ.Directories:
                     if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                         await ctx.message.delete()
 
@@ -825,7 +819,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
                         get_item = recurse_index(self.bot.univ.Directories[ctx.guild.id]['tree'], d)
 
                         try:
-                            if name in get_item.keys():
+                            if name in get_item:
                                 get_item.pop(name)
                             else:
                                 await ctx.send("A channel with that name doesn't exist there.", delete_after=5)
@@ -859,7 +853,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
         else:
             with lu_cm(self.bot, ctx.guild.id):
 
-                if ctx.guild.id in self.bot.univ.Directories.keys():
+                if ctx.guild.id in self.bot.univ.Directories:
                     if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                         await ctx.message.delete()
                         await ctx.send("You cannot use that command here.", delete_after=5)
@@ -898,7 +892,7 @@ Note: Your old channels will not be deleted, but the old directory channel will 
         else:
             with lu_cm(self.bot, ctx.guild.id):
 
-                if ctx.guild.id in self.bot.univ.Directories.keys():
+                if ctx.guild.id in self.bot.univ.Directories:
                     await ctx.message.delete()
                     if self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]['channelID']) is None:
                         await ctx.send("You need to set up your directory again.")
