@@ -33,7 +33,7 @@ class Events(Cog):
             with lu_cm(self.bot, channel.guild.id):
                 await sleep(5)
                 await self.bot.update_directory(channel, note="Updated automatically following channel deletion by user.")
-                if isinstance(channel, CategoryChannel) and channel.guild.id == self.bot.univ.Directories[channel.guild.id]["categoryID"]:
+                if isinstance(channel, CategoryChannel) and channel.id == self.bot.univ.Directories[channel.guild.id]["categoryID"]:
                     async def recurse_move_channels(d: dict):
                         for key, val in d.items():
                             if isinstance(val, tuple):
