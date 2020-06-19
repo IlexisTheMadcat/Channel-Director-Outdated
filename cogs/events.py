@@ -72,7 +72,7 @@ class Events(Cog):
 
         if self.bot.user.mentioned_in(msg):
             try:
-                if msg.author.id == self.bot.owner_id:
+                if msg.author.id in self.bot.owner_ids:
                     await msg.add_reaction("💕")
                 else:
                     await msg.add_reaction("👋")
