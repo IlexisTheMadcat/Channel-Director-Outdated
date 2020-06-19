@@ -602,15 +602,16 @@ class Commands(Cog):
                 get_item = recurse_index(self.bot.univ.Directories[ctx.guild.id]['tree'], path)
 
                 def recurse_delete_category(d: dict):
+                    if not isinstance(d, dict):
+                        raise TypeError
+
                     for key, val in d.items():
-                        if isinstance(val, int):
-                            channel = self.bot.get_channel(val)
-                            if channel:
+                        if isinstance(val, tuple):
+                            channel = self.bot.get_channel(val[0])
+                            if channel and not val[1]:
                                 yield channel
                         elif isinstance(val, dict):
                             yield from recurse_delete_category(val)
-                        else:
-                            raise TypeError
 
                 try:
                     for channel in recurse_delete_category(get_item[name]):
@@ -622,7 +623,8 @@ class Commands(Cog):
                 except TypeError:
                     await ctx.send(
                         "That's a channel silly! If you need to, go to the channel and delete it yourself. "
-                        "I currently cannot do that myself."
+                        "I currently cannot do that myself.",
+                        delete_afte=10
                     )
                     return
 
