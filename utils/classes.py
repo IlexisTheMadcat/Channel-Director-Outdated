@@ -6,6 +6,7 @@ from datetime import datetime
 from os import getcwd
 from os.path import exists
 from pickle import dump, Unpickler
+from random import randint
 from re import match
 from typing import List, Tuple
 
@@ -313,6 +314,59 @@ class Bot(DiscordBot):
         await recurse_convert_to_directory(directory["root"], self.univ)
         return directory
 
+    def recurse_read(
+            self,
+            d: dict,
+            lines: List[str],
+            depth: int = 1,
+            category: str = "Root Category:",
+            preview: bool = False
+    ):
+        """Recursively walk bot.Directories for guild and generate
+        a list of strings representing the directory message"""
+
+        d = {k: d[k] for k in sorted(d, key=lambda k: isinstance(d[k], dict))}
+        lines.append(category)
+
+        for key, val in d.items():
+            if isinstance(val, int):  # Retro-patching
+                d[key] = Tuple[(val, False)]
+
+            if isinstance(val, tuple) and not preview:
+                channel = self.get_channel(val[0])
+
+                if channel is None:
+                    d.pop(key)
+                    return d
+
+                else:
+                    if val[1]:
+                        lines.append(f"{'ーー' * depth} **[i] [** {key} **>>>** ||{channel.mention}||")
+                    else:
+                        lines.append(f"{'ーー' * depth} **[** {key} **>>>** ||{channel.mention}||")
+
+            elif val is None and preview:
+                rand_id = randint(650000000000000000, 699999999999999999)
+                lines.append(f"{'ーー' * depth} **[** {key} **>>>** ||{key.lower().replace(' ', '-')}-{rand_id}||")
+
+            elif isinstance(val, dict) and not preview:
+                category = f"**{'ーー' * depth} Category: [** {key} **]**"
+                ret = self.recurse_read(val, lines, depth + 1, category)
+
+                if isinstance(ret, dict):
+                    d[key] = ret
+                    return d
+
+            elif isinstance(val, dict):
+                category = f"**{'ーー' * depth} Category: [** {key} **]**"
+                ret = self.recurse_read(val, lines, depth + 1, category, preview=True)
+
+                if isinstance(ret, dict):
+                    d[key] = ret
+                    return d
+
+        return True
+
     async def update_directory(self, ctx, note="..."):
         """Update the directory associated with a guild"""
         if ctx.guild.id not in self.univ.Directories:
@@ -359,50 +413,11 @@ class Bot(DiscordBot):
                 return await directory_ch.send(f"Updated. `{note}`", delete_after=5)
 
             else:
-                def recurse_read(
-                        bot: Bot,
-                        d: dict,
-                        lines: List[str],
-                        depth: int = 1,
-                        category: str = "Root Category:",
-                ):
-                    """Recursively walk bot.Directories for guild and generate
-                    a list of strings representing the directory message"""
-
-                    d = {k: d[k] for k in sorted(d, key=lambda k: isinstance(d[k], dict))}
-                    lines.append(category)
-
-                    for key, val in d.items():
-                        if isinstance(val, int):  # Retro-patching
-                            d[key] = Tuple[(val, False)]
-
-                        if isinstance(val, tuple):
-                            channel = bot.get_channel(val[0])
-
-                            if channel is None:
-                                d.pop(key)
-                                return d
-
-                            else:
-                                if val[1]:
-                                    lines.append(f"{'ーー' * depth} **[i] [** {key} **>>>** ||{channel.mention}||")
-                                else:
-                                    lines.append(f"{'ーー' * depth} **[** {key} **>>>** ||{channel.mention}||")
-
-                        elif isinstance(val, dict):
-                            category = f"**{'ーー' * depth} Category: [** {key} **]**"
-                            ret = recurse_read(bot, val, lines, depth + 1, category)
-
-                            if isinstance(ret, dict):
-                                d[key] = ret
-                                return d
-
-                    return True
 
                 while True:
                     message_lines = list()
 
-                    result = recurse_read(self, self.univ.Directories[ctx.guild.id]["tree"]["root"], message_lines)
+                    result = self.recurse_read(self.univ.Directories[ctx.guild.id]["tree"]["root"], message_lines)
 
                     if isinstance(result, dict):
                         self.univ.Directories[ctx.guild.id]["tree"]["root"] = result
@@ -435,5 +450,3 @@ class Bot(DiscordBot):
                                     delete_after=30
                                 )
                             return
-
-        
