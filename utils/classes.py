@@ -461,7 +461,7 @@ class GroupMessage:
     Do not delete any messages in a message group or it's edit function will raise a NotFound exception.
     """
 
-    def __init__(self, channel: TextChannel, max_chars_per: int = 2000, resolution=10):
+    def __init__(self, channel: TextChannel, max_chars_per: int = 2000, resolution=5):
         # message_group is a list of MESSAGE IDs
         # resolution is the number of messages to manage in a group
         #   if _object in `group_edit` is larger than the total size (max_chars_per*resolution),
@@ -473,7 +473,7 @@ class GroupMessage:
 
         self.message_group: List[int] = list()
 
-    async def init2(self):
+    async def setup(self):
         """ Run this coroutine immediately after creating the GroupMessage instance. """
         if self.max_chars_per <= 0:
             raise ValueError("max_characters cannot be 0 or less.")
@@ -487,37 +487,43 @@ class GroupMessage:
         elif self.resolution >= 20:
             raise ValueError("resolution cannot be 20 or more.")
 
+        self.message_group = list()
+
         for i in range(self.resolution):
-            self.message_group = list()
             msg = await self.channel.send("||`!! --------------- !! Do Not Delete !! --------------- !!`||")
             self.message_group.append(msg.id)
 
     async def group_edit(self, _object):
-        """ Edit the messages in the group """
+        """
+        Edit the messages in the group instantiated with `setup`
+        """
 
         if not self.message_group:
-            raise ValueError("You need to run the `init2` function first.")
+            raise ValueError("You need to run the `setup` function first.")
 
         _object = str(_object)
         message_strs = list()
 
-        seeker = 0
-        seeker_max = len(_object)
+        seeker_sp = 0  # Startpoint
+        seeker_ep = self.max_chars_per  # Endpoint
+        seeker_max = len(_object)  # Maximun distance to render
 
-        if len(_object) > self.resolution*2000:
+        if len(_object) > self.resolution*self.max_chars_per:
             raise ValueError("The value passed is too large to edit the current resolution of messages.\n"
                              "To create a larger message group, create a new instance with a larger resolution.")
 
-        while seeker < seeker_max:
-            message_strs.append(_object[seeker:self.max_chars_per])
-            seeker = seeker + self.max_chars_per
+        while seeker_sp < seeker_max:
+            message_strs.append(_object[seeker_sp:seeker_ep])  # TODO: Find a way to find the nearest `\n` at the split point to make it cleaner
+            seeker_sp = seeker_sp + self.max_chars_per
+            seeker_ep = seeker_ep + self.max_chars_per
 
         for ind in range(self.resolution):
             try:
                 msg = await self.channel.fetch_message(self.message_group[ind])
             except NotFound:  # Catch the exception to raise it with a new description
                 raise IndexError("A message in the message group has been deleted by a user.\n"
-                                 "Please recreate the instance.")
+                                 "You need to recreate the instance.")
+
             try:
                 await msg.edit(content=message_strs[ind])
             except IndexError:

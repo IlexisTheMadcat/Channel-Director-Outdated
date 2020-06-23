@@ -24,8 +24,7 @@ from discord.ext.commands.errors import (
 )
 
 # Local
-
-from utils.classes import Bot  # , GlobalTextChannelConverter
+from utils.classes import Bot, GroupMessage  # , GlobalTextChannelConverter
 
 
 class Admin(Cog):
@@ -34,6 +33,13 @@ class Admin(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.say_dest = None
+
+    @command(name="test")  # Test the GroupMessage class
+    @is_owner()
+    async def group_message(self, ctx, *, text):
+        gm = GroupMessage(ctx.channel, max_chars_per=100, resolution=4)
+        await gm.setup()
+        await gm.group_edit(text)
 
     """ ######################
          Managing Bot Modules
