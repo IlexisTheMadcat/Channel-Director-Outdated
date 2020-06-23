@@ -144,15 +144,16 @@ Directory management -- Control the directory setup
     teardown        - "M/Server" and "M/Channels"
 
 Channel Management -- Manage channels in the directory
-    create_channel  - "M/Channels"
-    create_category - "M/Channels"
-    delete_category - "M/Channels"
-    rename_channel  - "M/Channels"
-    move_channel    - "M/Channels"
-    import_channel  - "M/Channels"
-    hide_channel    - "M/Channels"
-    update          - "M/Channels"
-    save_directory  - No Limits
+    create_channel    - "M/Channels"
+    create_category   - "M/Channels"
+    delete_category   - "M/Channels"
+    rename_channel    - "M/Channels"
+    move_channel      - "M/Channels"
+    import_channel    - "M/Channels"
+    hide_channel      - "M/Channels"
+    update            - "M/Channels"
+    save_directory    - No Limits
+    preview_directory - No Limits
 
 General -- General commands
     help   - No Limits
@@ -253,6 +254,16 @@ Save your current directory setup to a file to be loaded later at any time.
 **--** This file contains pickled data using Python.
 **--** To load said file, use the `{BOT_PREFIX}setup` command and attach the file to proceed.
 **----** The process takes longer depending on how many channels are in the entire directory.
+"""
+
+            elif subsection.lower() == "preview_directory":
+                em.description = f"""
+**PREVIEW_DIRECTORY**; Aliases: "preview", "pvd"
+`{BOT_PREFIX}preview_directory`
+------------------------------
+Sends you a Direct Message with a preview of a `cdr_directory.pkl` file.
+**--** These are obtained using the `save_directory` command.
+**--** Use this command if you are unsure what the structure of the file actually is.
 """
             elif subsection.lower() == "update":
                 em.description = f"""
