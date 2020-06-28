@@ -28,19 +28,28 @@ class MiscCommands(Cog):
         else:
             return int(0x000000)
     
-    @command(name='invite')
+    @command()
     async def invite(self, ctx: Context):
         """Sends an OAuth bot invite URL"""
 
         app_info: AppInfo = await self.bot.application_info()
-        permissions = Permissions(536881152)
+        permissions = Permissions()
+        permissions.update(
+            manage_channels=True,
+            manage_roles=True,
+            manage_messages=True,
+            read_messages=True,
+            send_messages=True,
+            attach_files=True,
+            add_reactions=True
+        )
 
         em = Embed(
             title=f'OAuth URL for {self.bot.user.name}',
             description=f'[Click Here]'
                         f'({oauth_url(app_info.id, permissions)}) '
                         f'to invite me to your guild.',
-            color=self.color(ctx)
+            color=0xaaeaff
         )
         await ctx.send(embed=em)
      
