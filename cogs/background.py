@@ -46,7 +46,7 @@ class BackgroundTasks(Cog):
         else:
             activity = Activity(
                 type=ActivityType.watching,
-                name=f"{self.bot.command_prefix}help | {self.bot.tz}: {time}"
+                name=f"{self.bot.command_prefix}help | UTC: {time}"
             )
 
         await self.bot.change_presence(status=status, activity=activity)
@@ -78,8 +78,8 @@ class BackgroundTasks(Cog):
             config_data = {
                 "debug_mode": self.bot.debug_mode,
                 "auto_pull": self.bot.auto_pull,
-                "tz": self.bot.tz,
-                "prefix": self.bot.command_prefix
+                "prefix": self.bot.command_prefix,
+                "button_ids": self.bot.buttons
             }
 
             try:
