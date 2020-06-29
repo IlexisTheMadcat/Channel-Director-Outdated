@@ -1068,7 +1068,7 @@ class Commands(Cog):
     @command(aliases=["preview"])
     @bot_has_permissions(**required_permissions)
     async def preview_directory(self, ctx):
-        if ctx.guild.id in self.bot.univ.Directories and \
+        if ctx.guild and ctx.guild.id in self.bot.univ.Directories and \
                 ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
             await ctx.message.delete()
             await ctx.send("You cannot use that command here.", delete_after=5)
@@ -1114,7 +1114,9 @@ class Commands(Cog):
                     message_full = "\n".join(message_lines)
                     try:
                         await ctx.author.send(content=message_full)
-                        await ctx.send("I sent you a Direct Message with your preview.")
+                        if ctx.guild:
+                            await ctx.send("I sent you a Direct Message with your preview.")
+
                         break
 
                     except HTTPException as e:
