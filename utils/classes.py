@@ -198,7 +198,6 @@ class Bot(DiscordBot):
         # Capture extra meta from init for cogs, former `global`s
         self.auto_pull = kwargs.pop("auto_pull", True)
         self.debug_mode = kwargs.pop("debug_mode", False)
-        self.tz = kwargs.pop("tz", "UTC")
 
         # Attribute for accessing tokens from file
         self.auth = PickleInterface(f"{self.cwd}/Serialized/tokens.pkl")

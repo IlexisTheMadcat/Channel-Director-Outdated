@@ -28,23 +28,13 @@ class BackgroundTasks(Cog):
 
     @loop(seconds=60)
     async def status_change(self):
-        if self.bot.tz != "UTC":
-            hour = str(datetime.now().hour)
-            minute = str(datetime.now().minute)
-            if len(hour) == 1:
-                hour = "0" + hour
-            if len(minute) == 1:
-                minute = "0" + minute
-            time = f"{hour}:{minute}"
-
-        else:
-            utchour = str(datetime.utcnow().hour)
-            utcminute = str(datetime.utcnow().minute)
-            if len(utchour) == 1:
-                utchour = "0" + utchour
-            if len(utcminute) == 1:
-                utcminute = "0" + utcminute
-            time = f"{utchour}:{utcminute}"
+        utchour = str(datetime.utcnow().hour)
+        utcminute = str(datetime.utcnow().minute)
+        if len(utchour) == 1:
+            utchour = "0" + utchour
+        if len(utcminute) == 1:
+            utcminute = "0" + utcminute
+        time = f"{utchour}:{utcminute}"
 
         if self.bot.univ.Inactive >= 5:
             status = Status.idle
