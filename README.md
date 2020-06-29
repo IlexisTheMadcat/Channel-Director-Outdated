@@ -42,6 +42,7 @@ Channels -- Manage channels in the directory
     import_channel    - You require the "Manage Channels" permission.
     hide_channel      - You require the "Manage Channels" permission.
     save_directory    - No Limits
+    preview_directory - No Limits
     update            - You require the "Manage Channels" permission.
 
 General -- General commands
@@ -152,6 +153,13 @@ Save your current directory setup to a file to be loaded later at any time.\
 **--** This file contains pickled data using Python.\
 **--** To load said file, use the `cdr:setup` command and attach the file to proceed.\
 **----** The process takes longer depending on how many channels are in the entire directory.
+
+#### PREVIEW_DIRECTORY**; Aliases: "preview", "pvd"
+`{BOT_PREFIX}preview_directory`\
+**------------------------------**\
+Sends you a Direct Message with a preview of a `cdr_directory.pkl` file.\
+**--** These are obtained using the `save_directory` command.\
+**--** Use this command if you are unsure what the structure of the file actually is.
 
 #### UPDATE
 `cdr:update`\
