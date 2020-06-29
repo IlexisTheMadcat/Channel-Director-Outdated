@@ -106,6 +106,7 @@ class Commands(Cog):
                             await msg.clear_reactions()
                             await sleep(2)
                             await msg.edit(content="Okay, I canceled the operation.")
+                            ctx.command.reset_cooldown(ctx)
 
                             return
 
@@ -164,6 +165,7 @@ class Commands(Cog):
                             await msg.clear_reactions()
                             await sleep(2)
                             await msg.edit(content="Okay, I canceled the operation.")
+                            ctx.command.reset_cooldown(ctx)
 
                             return
 
@@ -233,6 +235,7 @@ class Commands(Cog):
                                         "you create a channel using the special command that I provide to you.\n"
                                         "Also, make sure I have access to all channels added.\n"
                                         "You are free to move this channel, but it's best to leave on top.")
+
                                     await msg.edit(
                                         content=f"Finished setup. Get to the directory here: {directory.mention}")
 
@@ -242,66 +245,67 @@ class Commands(Cog):
 
                                     return
 
-                                await msg.edit(content="You've attached a valid file to your message.\n"
-                                                       "Do you want to attempt to load it?\n"
-                                                       "`[✅] (=================)`"
-                                               )
+                                elif str(reaction.emoji) == "✅":
+                                    await msg.edit(content="You've attached a valid file to your message.\n"
+                                                           "Do you want to attempt to load it?\n"
+                                                           "`[✅] (=================)`"
+                                                   )
 
-                                await sleep(2)
-                                await msg.edit(content="Setting up with attached file...")
+                                    await sleep(2)
+                                    await msg.edit(content="Setting up with attached file...")
 
-                                await file.save(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl")
-                                with open(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl", "rb") as f:
+                                    await file.save(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl")
+                                    with open(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl", "rb") as f:
+                                        try:
+                                            tree = Unpickler(f).load()
+                                            # TODO: WARNING: USERS CAN UPLOAD MALICIOUS .PKLs MAKING THIS INSECURE.
+
+                                        except Exception as e:
+                                            await msg.edit(
+                                                content=f"The setup failed because the file is either changed, "
+                                                        f"corrupted, or outdated.\n"
+                                                        f"`Error description: {e}`")
+
+                                            return
+
+                                    remove(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl")
+
+                                    cat = await ctx.guild.create_category("Directory Archive")
+                                    directory = await cat.create_text_channel("directory",
+                                                                              topic="Managers: Leave this channel "
+                                                                                    "on top for easy access. "
+                                                                                    "Also do not delete it.")
+
+                                    await directory.set_permissions(ctx.guild.default_role, send_messages=False)
+                                    member_self = await ctx.guild.fetch_member(self.bot.user.id)
+                                    await directory.set_permissions(member_self, send_messages=True)
+                                    await directory.set_permissions(ctx.author, send_messages=True)
+
+                                    dmessage = await directory.send("Adding channels...")
+
                                     try:
-                                        tree = Unpickler(f).load()
-                                        # TODO: WARNING: USERS CAN UPLOAD MALICIOUS .PKLs MAKING THIS INSECURE.
+                                        self.bot.univ.Directories.update({ctx.guild.id: {"categoryID": cat.id,
+                                                                                         "channelID": directory.id,
+                                                                                         "msgID": dmessage.id, "tree": {}}})
+                                        tree = await self.bot.convert_to_directory(ctx, tree)
+                                        self.bot.univ.Directories[ctx.guild.id]["tree"] = tree
+                                    except TypeError as e:
+                                        self.bot.univ.Directories.pop(ctx.guild.id)
+                                        for i in cat.channels:
+                                            await i.delete()
 
-                                    except Exception as e:
+                                        await cat.delete()
                                         await msg.edit(
-                                            content=f"The setup failed because the file is either changed, "
-                                                    f"corrupted, or outdated.\n"
+                                            content=f"The setup failed because the file does not contain valid data.\n"
                                                     f"`Error description: {e}`")
 
                                         return
-
-                                remove(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl")
-
-                                cat = await ctx.guild.create_category("Directory Archive")
-                                directory = await cat.create_text_channel("directory",
-                                                                          topic="Managers: Leave this channel "
-                                                                                "on top for easy access. "
-                                                                                "Also do not delete it.")
-
-                                await directory.set_permissions(ctx.guild.default_role, send_messages=False)
-                                member_self = await ctx.guild.fetch_member(self.bot.user.id)
-                                await directory.set_permissions(member_self, send_messages=True)
-                                await directory.set_permissions(ctx.author, send_messages=True)
-
-                                dmessage = await directory.send("Adding channels...")
-
-                                try:
-                                    self.bot.univ.Directories.update({ctx.guild.id: {"categoryID": cat.id,
-                                                                                     "channelID": directory.id,
-                                                                                     "msgID": dmessage.id, "tree": {}}})
-                                    tree = await self.bot.convert_to_directory(ctx, tree)
-                                    self.bot.univ.Directories[ctx.guild.id]["tree"] = tree
-                                except TypeError as e:
-                                    self.bot.univ.Directories.pop(ctx.guild.id)
-                                    for i in cat.channels:
-                                        await i.delete()
-
-                                    await cat.delete()
-                                    await msg.edit(
-                                        content=f"The setup failed because the file does not contain valid data.\n"
-                                                f"`Error description: {e}`")
+                                    else:
+                                        await self.bot.update_directory(ctx=ctx, note="Finished automated setup.")
+                                        await msg.edit(
+                                            content=f"Finished setup. Get to the directory here: {directory.mention}")
 
                                     return
-                                else:
-                                    await self.bot.update_directory(ctx=ctx, note="Finished automated setup.")
-                                    await msg.edit(
-                                        content=f"Finished setup. Get to the directory here: {directory.mention}")
-
-                                return
                         else:
                             await msg.clear_reactions()
 
@@ -357,6 +361,7 @@ class Commands(Cog):
                         if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                             await ctx.message.delete()
                             await ctx.send("You can't do that here!", delete_after=5)
+                            ctx.command.reset_cooldown(ctx)
 
                             return
 
@@ -391,6 +396,7 @@ class Commands(Cog):
                                             "using the `save_directory` command.\n"
                                             "`[❎] (=================)`"
                                     )
+                                ctx.command.reset_cooldown(ctx)
 
                                 await sleep(2)
                                 await msg.edit(content="Okay, I canceled the operation.")
@@ -485,7 +491,8 @@ class Commands(Cog):
                                         "Confirm: You are deleting an external category. "
                                         "This will delete **EVERY** channel under it.\n"
                                         "`[❎] (=================)`"
-                            )
+                                )
+                            ctx.command.reset_cooldown(ctx)
 
                             await sleep(2)
                             await msg.edit(content="Okay, I canceled the operation.")
