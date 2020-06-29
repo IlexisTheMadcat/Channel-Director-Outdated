@@ -1065,7 +1065,7 @@ class Commands(Cog):
                         f"Use the `{self.bot.command_prefix}setup` command to create one.")
 
     @cooldown(1, 5, BucketType.guild)
-    @command(aliases=["preview"])
+    @command(aliases=["preview", "pvd"])
     @bot_has_permissions(**required_permissions)
     async def preview_directory(self, ctx):
         if ctx.guild and ctx.guild.id in self.bot.univ.Directories and \
