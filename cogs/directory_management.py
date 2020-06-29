@@ -6,6 +6,7 @@ from pickle import Unpickler, dump
 
 # Site
 from discord import TextChannel
+from discord.ext.commands import cooldown, BucketType
 from discord.ext.commands.cog import Cog
 from discord.ext.commands.context import Context
 from discord.ext.commands.core import bot_has_permissions, command, has_permissions
@@ -16,19 +17,29 @@ from discord.file import File
 from utils.classes import Bot
 from utils.directory_mgmt import recurse_index, LoadingUpdate_contextmanager as Loading
 
+required_permissions_total = {
+    "manage_channels": True,
+    "manage_roles": True,
+    "manage_messages": True,
+    "read_messages": True,
+    "send_messages": True,
+    "attach_files": True,
+    "add_reactions": True
+}
+
+required_permissions = {
+    "manage_messages": True,
+    "send_messages": True
+}
+
 
 class Commands(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.bot.remove_command("help")
 
-    @bot_has_permissions(
-        send_messages=True,
-        manage_channels=True,
-        manage_messages=True,
-        manage_roles=True,
-        add_reactions=True
-    )
+    @cooldown(1, 300, BucketType.guild)
+    @bot_has_permissions(manage_channels=True, add_reactions=True, manage_roles=True, **required_permissions)
     @has_permissions(manage_channels=True, manage_guild=True)
     @command(name="setup", aliases=["su"])
     async def setup_directory(self, ctx: Context):
@@ -38,14 +49,16 @@ class Commands(Cog):
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
             await ctx.message.delete()
-            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`", delete_after=5)
+            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
+                           delete_after=5)
             return
         else:
             with Loading(self.bot, ctx.guild.id):
 
                 if ctx.guild.id in self.bot.univ.Directories:
                     msg = await ctx.send("You already have a directory tree set up. Continue anyway?\n"
-                                         "Note: Your old channels will not be deleted, but the old directory channel will not be kept updated or managed anymore.\n"
+                                         "Note: Your old channels will not be deleted, "
+                                         "but the old directory channel will not be kept updated or managed anymore.\n"
                                          "*The restart button **will** teardown the old directory for you.*\n"
                                          "`[  ] (within 30 seconds)`"
                                          )
@@ -55,19 +68,22 @@ class Commands(Cog):
                     await msg.add_reaction("🔄")
 
                 else:
-                    msg = await ctx.send("This setup will create a new category that you can edit, **but you should never delete it**."
-                                         "\nThe category is used by the bot to identify it as a storage system for the channels.\n\n"
+                    msg = await ctx.send("This setup will create a new category that you can edit, "
+                                         "**but you should never delete it**."
+                                         "\nThe category is used by the bot to identify "
+                                         "it as a storage system for the channels.\n\n"
                                          "The entire process is handled by me so, mind your manners, please.\n"
                                          "`[  ] (within 30 seconds)`"
                                          )
                     await msg.add_reaction("✅")
                     await msg.add_reaction("❎")
 
-                def check(reaction, user):
+                def check(c_reaction, c_user):
                     emj = ["✅", "❎"]
                     if ctx.guild.id in self.bot.univ.Directories:
                         emj.append("🔄")
-                    return str(reaction.emoji) in emj and user == ctx.author and reaction.message.id == msg.id
+
+                    return str(c_reaction.emoji) in emj and c_user == ctx.author and c_reaction.message.id == msg.id
 
                 try:
                     reaction, user = await self.bot.wait_for("reaction_add", timeout=30, check=check)
@@ -81,7 +97,9 @@ class Commands(Cog):
                     if ctx.guild.id in self.bot.univ.Directories:
                         if str(reaction.emoji) == "❎":
                             await msg.edit(content="You already have a directory tree set up. Continue anyway?\n"
-                                                   "Note: Your old channels will not be deleted, but the old directory channel will not be kept updated or managed anymore.\n"
+                                                   "Note: Your old channels will not be deleted, "
+                                                   "but the old directory channel will not be kept "
+                                                   "updated or managed anymore.\n"
                                                    "*The restart button **will** teardown the old directory for you.*\n"
                                                    "`[❎] (=================)`"
                                            )
@@ -93,16 +111,21 @@ class Commands(Cog):
 
                         elif str(reaction.emoji) == "✅":
                             await msg.edit(content="You already have a directory tree set up. Continue anyway?\n"
-                                                   "Note: Your old channels will not be deleted, but the old directory channel will not be kept updated or managed anymore.\n"
+                                                   "Note: Your old channels will not be deleted, "
+                                                   "but the old directory channel will not be kept "
+                                                   "updated or managed anymore.\n"
                                                    "*The restart button **will** teardown the old directory for you.*\n"
                                                    "`[✅] (=================)`"
                                            )
                             with suppress(Exception):
-                                await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"]).edit(name="[❌] Directory Archive")
+                                await self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"]).edit(
+                                    name="[❌] Directory Archive")
 
                         elif str(reaction.emoji) == "🔄":
                             await msg.edit(content="You already have a directory tree set up. Continue anyway?\n"
-                                                   "Note: Your old channels will not be deleted, but the old directory channel will not be kept updated or managed anymore.\n"
+                                                   "Note: Your old channels will not be deleted, "
+                                                   "but the old directory channel will not be kept "
+                                                   "updated or managed anymore.\n"
                                                    "*The restart button **will** teardown the old directory for you.*\n"
                                                    "`[🔄] (=================)`"
                                            )
@@ -129,9 +152,12 @@ class Commands(Cog):
 
                     else:
                         if str(reaction.emoji) == "❎":
-                            await msg.edit(content="This setup will create a new category that you can edit, **but you should never delete it**.\n"
-                                                   "The category is used by the bot to identify it as a storage system for the channels.\n\n"
-                                                   "The entire process is handled by me so, mind your manners, please.\n"
+                            await msg.edit(content="This setup will create a new category that you can edit, "
+                                                   "**but you should never delete it**.\n"
+                                                   "The category is used by the bot to identify "
+                                                   "it as a storage system for the channels.\n\n"
+                                                   "The entire process is handled by me so, "
+                                                   "mind your manners, please.\n"
                                                    "`[❎] (=================)`"
                                            )
 
@@ -142,9 +168,12 @@ class Commands(Cog):
                             return
 
                         elif str(reaction.emoji) == "✅":
-                            await msg.edit(content="This setup will create a new category that you can edit, **but you should never delete it**.\n"
-                                                   "The category is used by the bot to identify it as a storage system for the channels.\n\n"
-                                                   "The entire process is handled by me so, mind your manners, please.\n"
+                            await msg.edit(content="This setup will create a new category that you can edit, "
+                                                   "**but you should never delete it**.\n"
+                                                   "The category is used by the bot to identify "
+                                                   "it as a storage system for the channels.\n\n"
+                                                   "The entire process is handled by me so, "
+                                                   "mind your manners, please.\n"
                                                    "`[✅] (=================)`"
                                            )
                     await msg.clear_reactions()
@@ -163,12 +192,13 @@ class Commands(Cog):
                             await msg.edit(content="You've attached a valid file to your message.\n"
                                                    "Do you want to attempt to load it?\n"
                                                    "`[  ] (within 10 seconds)`"
-
                                            )
                             await msg.add_reaction("✅")
                             await msg.add_reaction("❎")
-                            def check(reaction, user):
-                                return str(reaction.emoji) in ["✅", "❎"] and user.id == ctx.author.id and reaction.message.id == msg.id
+
+                            def check(c_reaction, c_user):
+                                return str(c_reaction.emoji) in ["✅",  "❎"] \
+                                       and c_user.id == ctx.author.id and c_reaction.message.id == msg.id
 
                             try:
                                 reaction, user = await self.bot.wait_for("reaction_add", timeout=10, check=check)
@@ -190,15 +220,21 @@ class Commands(Cog):
                                     await msg.edit(content="Setting up now...")
                                     cat = await ctx.guild.create_category("Directory Archive")
                                     directory = await cat.create_text_channel("directory",
-                                                                              topic="Managers: Leave this channel on top for easy access. Also do not delete it.")
+                                                                              topic="Managers: Leave this channel "
+                                                                                    "on top for easy access. "
+                                                                                    "Also do not delete it.")
 
                                     await directory.set_permissions(ctx.guild.default_role, send_messages=False)
                                     member_self = await ctx.guild.fetch_member(self.bot.user.id)
                                     await directory.set_permissions(member_self, send_messages=True)
 
                                     dmessage = await directory.send(
-                                        "This channel will have a directory under it when you create a channel using the special command that I provide to you.\nAlso, make sure I have access to all channels added.\nYou are free to move this channel, but it's best to leave on top.")
-                                    await msg.edit(content=f"Finished setup. Get to the directory here: {directory.mention}")
+                                        "This channel will have a directory under it when "
+                                        "you create a channel using the special command that I provide to you.\n"
+                                        "Also, make sure I have access to all channels added.\n"
+                                        "You are free to move this channel, but it's best to leave on top.")
+                                    await msg.edit(
+                                        content=f"Finished setup. Get to the directory here: {directory.mention}")
 
                                     self.bot.univ.Directories.update(
                                         {ctx.guild.id: {"categoryID": cat.id, "channelID": directory.id,
@@ -217,10 +253,14 @@ class Commands(Cog):
                                 await file.save(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl")
                                 with open(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl", "rb") as f:
                                     try:
-                                        tree = Unpickler(f).load()  # TODO: WARNING: USERS CAN UPLOAD MALICIOUS .PKLs MAKING THIS INSECURE.
+                                        tree = Unpickler(f).load()
+                                        # TODO: WARNING: USERS CAN UPLOAD MALICIOUS .PKLs MAKING THIS INSECURE.
+
                                     except Exception as e:
                                         await msg.edit(
-                                            content=f"The setup failed because the file is either changed, corrupted, or outdated.\n`Error description: {e}`")
+                                            content=f"The setup failed because the file is either changed, "
+                                                    f"corrupted, or outdated.\n"
+                                                    f"`Error description: {e}`")
 
                                         return
 
@@ -228,7 +268,9 @@ class Commands(Cog):
 
                                 cat = await ctx.guild.create_category("Directory Archive")
                                 directory = await cat.create_text_channel("directory",
-                                                                          topic="Managers: Leave this channel on top for easy access. Also do not delete it.")
+                                                                          topic="Managers: Leave this channel "
+                                                                                "on top for easy access. "
+                                                                                "Also do not delete it.")
 
                                 await directory.set_permissions(ctx.guild.default_role, send_messages=False)
                                 member_self = await ctx.guild.fetch_member(self.bot.user.id)
@@ -250,12 +292,14 @@ class Commands(Cog):
 
                                     await cat.delete()
                                     await msg.edit(
-                                        content=f"The setup failed because the file does not contain valid data.\n`Error description: {e}`")
+                                        content=f"The setup failed because the file does not contain valid data.\n"
+                                                f"`Error description: {e}`")
 
                                     return
                                 else:
                                     await self.bot.update_directory(ctx=ctx, note="Finished automated setup.")
-                                    await msg.edit(content=f"Finished setup. Get to the directory here: {directory.mention}")
+                                    await msg.edit(
+                                        content=f"Finished setup. Get to the directory here: {directory.mention}")
 
                                 return
                         else:
@@ -264,42 +308,51 @@ class Commands(Cog):
                             await msg.edit(content="Setting up now...")
                             cat = await ctx.guild.create_category("Directory Archive")
                             directory = await cat.create_text_channel("directory",
-                                                                      topic="Managers: Leave this channel on top for easy access. Also do not delete it.")
+                                                                      topic="Managers: "
+                                                                            "Leave this channel on top for "
+                                                                            "easy access. Also do not delete it.")
 
                             await directory.set_permissions(ctx.guild.default_role, send_messages=False)
                             member_self = await ctx.guild.fetch_member(self.bot.user.id)
                             await directory.set_permissions(member_self, send_messages=True)
 
                             dmessage = await directory.send(
-                                "This channel will have a directory under it when you create a channel using the special command that I provide to you.\nAlso, make sure I have access to all channels added.\nYou are free to move this channel, but it's best to leave on top.")
+                                "This channel will have a directory under it when "
+                                "you create a channel using the special command that I provide to you.\n"
+                                "Also, make sure I have access to all channels added.\n"
+                                "You are free to move this channel, but it's best to leave on top.")
                             await msg.edit(content=f"Finished setup. Get to the directory here: {directory.mention}")
 
-                            self.bot.univ.Directories.update({ctx.guild.id: {"categoryID": cat.id, "channelID": directory.id,
-                                                                             "msgID": dmessage.id, "tree": {"root": {}}}})
+                            self.bot.univ.Directories.update(
+                                {ctx.guild.id: {"categoryID": cat.id,
+                                                "channelID": directory.id,
+                                                "msgID": dmessage.id,
+                                                "tree": {"root": {}
+                                                         }
+                                                }
+                                 }
+                            )
 
                             return
 
-    @bot_has_permissions(
-        send_messages=True,
-        manage_channels=True,
-        manage_messages=True,
-        add_reactions=True
-    )
+    @cooldown(1, 30, BucketType.guild)
+    @bot_has_permissions(manage_channels=True, **required_permissions)
     @has_permissions(manage_channels=True, manage_guild=True)
     @command(name="teardown", aliases=["td"])
-    async def teardown_directory(self, ctx: Context, categoryID: int = 0):
+    async def teardown_directory(self, ctx: Context, categoryid: int = 0):
         if not ctx.guild:
             await ctx.send("This command cannot be used in a DM channel.")
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
             await ctx.message.delete()
-            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`", delete_after=5)
+            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
+                           delete_after=5)
             return
         else:
             with Loading(self.bot, ctx.guild.id):
 
-                if categoryID == 0:
+                if categoryid == 0:
                     if ctx.guild.id in self.bot.univ.Directories:
                         if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                             await ctx.message.delete()
@@ -307,145 +360,168 @@ class Commands(Cog):
 
                             return
 
-                        msg = await ctx.send("Are you sure? **This will delete EVERY channel under the managed category**, imported or not.\n"
-                                             "If you want to, you can save your directory first using the `save_directory` command.\n"
-                                             "`[  ] (within 30 seconds)`"
-                                             )
-        
+                        msg = await ctx.send(
+                            "Are you sure? **This will delete EVERY channel "
+                            "under the managed category**, imported or not.\n"
+                            "If you want to, you can save your directory first using the `save_directory` command.\n"
+                            "`[  ] (within 30 seconds)`"
+                            )
+
                         await msg.add_reaction("✅")
                         await msg.add_reaction("❎")
-        
-                        def check(reaction, user):
-                            return str(reaction.emoji) in ["✅", "❎"] and user.id == ctx.author.id and reaction.message.id == msg.id
-        
+
+                        def check(c_reaction, c_user):
+                            return str(c_reaction.emoji) in ["✅", "❎"] \
+                                   and c_user.id == ctx.author.id and c_reaction.message.id == msg.id
+
                         try:
                             reaction, user = await self.bot.wait_for("reaction_add", timeout=30, check=check)
                         except TimeoutError:
                             await msg.clear_reactions()
                             await msg.edit(content="You timed out, so I wont continue.")
-                            
+
                             return
                         else:
                             await msg.clear_reactions()
                             if str(reaction.emoji) == "❎":
-                                await msg.edit(content="Are you sure? **This will delete EVERY channel under the managed category**, imported or not.\n"
-                                                       "If you want to, you can save your directory first using the `save_directory` command.\n"
-                                                       "`[❎] (=================)`"
-                                               )
+                                await msg.edit(
+                                    content="Are you sure? **This will delete EVERY channel "
+                                            "under the managed category**, imported or not.\n"
+                                            "If you want to, you can save your directory first "
+                                            "using the `save_directory` command.\n"
+                                            "`[❎] (=================)`"
+                                    )
 
                                 await sleep(2)
                                 await msg.edit(content="Okay, I canceled the operation.")
-                                
-                                return
-        
-                            await msg.edit(content="Are you sure? **This will delete EVERY channel under the managed category**, imported or not.\n"
-                                                   "If you want to, you can save your directory first using the `save_directory` command.\n"
-                                                   "`[✅] (=================)`"
-                                           )
 
-                            await sleep(2)
-                            await msg.edit(content="Tearing down...")
-                            
-                            try:
-                                category = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
-                            except NotFound:
-                                await msg.edit(content="I couldn't find the category for the channels.")
-                                self.bot.univ.Directories.pop(ctx.guild.id)
-                                
                                 return
-        
-                            for i in category.channels:
-                                await i.delete()
-                                await sleep(0.1)
-        
-                            await category.delete()
-        
-                            self.bot.univ.Directories.pop(ctx.guild.id)
-                            
-                            await msg.edit(content="Teardown complete.")
+
+                            elif str(reaction.emoji) == "✅":
+                                await msg.edit(
+                                    content="Are you sure? **This will delete EVERY channel "
+                                            "under the managed category**, imported or not.\n"
+                                            "If you want to, you can save your directory first "
+                                            "using the `save_directory` command.\n"
+                                            "`[✅] (=================)`"
+                                    )
+
+                                await sleep(2)
+                                await msg.edit(content="Tearing down...")
+
+                                try:
+                                    category = self.bot.get_channel(
+                                        self.bot.univ.Directories[ctx.guild.id]["categoryID"])
+
+                                except NotFound:
+                                    await msg.edit(content="I couldn't find the category for the channels.")
+                                    self.bot.univ.Directories.pop(ctx.guild.id)
+
+                                    return
+
+                                for i in category.channels:
+                                    await i.delete()
+                                    await sleep(0.1)
+
+                                await category.delete()
+
+                                self.bot.univ.Directories.pop(ctx.guild.id)
+
+                                await msg.edit(content="Teardown complete.")
                     else:
                         await ctx.send("You don't have a directory to tear down.")
                 else:
                     if ctx.guild.id in self.bot.univ.Directories and ctx.channel.id == \
                             self.bot.univ.Directories[ctx.guild.id]["channelID"]:
                         await ctx.send("You can't do that here!", delete_after=5)
-                        
+
                         return
-        
-                    if ctx.guild.id in self.bot.univ.Directories and categoryID == \
+
+                    if ctx.guild.id in self.bot.univ.Directories and categoryid == \
                             self.bot.univ.Directories[ctx.guild.id]["categoryID"]:
                         await ctx.send(
-                            "You cannot specify the external category used for the directory. In that case, don't specify any ID.",
+                            "You cannot specify the external category used for the directory. "
+                            "In that case, don't specify any ID.",
                             delete_after=5)
-                        
+
                         return
-        
+
                     try:
-                        category = self.bot.get_channel(categoryID)
+                        category = self.bot.get_channel(categoryid)
                     except NotFound:
                         await ctx.send("No category with that ID exists.")
                     else:
-                        if categoryID not in [guild.id for guild in ctx.guild.channels]:
+                        if categoryid not in [guild.id for guild in ctx.guild.channels]:
                             await ctx.send(
                                 "That category does exist, but it isn't in your server. Why would I let you do that?")
-                            
+
                             return
-        
+
                     msg = await ctx.send("Are you sure?\n"
-                                         "Confirm: You are deleting an external category.\n"
+                                         "Confirm: You are deleting an external category. "
+                                         "This will delete **EVERY** channel under it.\n"
                                          "`[  ] (within 10 seconds)`"
                                          )
 
                     await msg.add_reaction("✅")
                     await msg.add_reaction("❎")
-        
-                    def check(reaction, user):
-                        return str(reaction.emoji) in ["✅", "❎"] and user == ctx.author and reaction.message.id == msg.id
-        
+
+                    def check(c_reaction, c_user):
+                        return str(c_reaction.emoji) in ["✅", "❎"] \
+                               and c_user == ctx.author and c_reaction.message.id == msg.id
+
                     try:
                         reaction, user = await self.bot.wait_for("reaction_add", timeout=10, check=check)
                     except TimeoutError:
                         await msg.clear_reactions()
                         await msg.edit(content="You timed out, so I wont continue.")
-                        
+
                         return
                     else:
                         await msg.clear_reactions()
                         if str(reaction.emoji) == "❎":
                             await msg.edit(
                                 content="Are you sure?\n"
-                                        "Confirm: You are deleting an external category.\n"
+                                        "Confirm: You are deleting an external category. "
+                                        "This will delete **EVERY** channel under it.\n"
                                         "`[❎] (=================)`"
                             )
 
                             await sleep(2)
                             await msg.edit(content="Okay, I canceled the operation.")
-                            
+
                             return
 
-                        await msg.edit(content="Are you sure?\n"
-                                               "Confirm: You are deleting an external category.\n"
-                                               "`[✅] (=================)`"
-                                       )
+                        elif str(reaction.emoji) == "✅":
+                            await msg.edit(content="Are you sure?\n"
+                                                   "Confirm: You are deleting an external category. "
+                                                   "This will delete **EVERY** channel under it.\n"
+                                                   "`[✅] (=================)`"
+                                           )
 
-                        await sleep(2)
-                        await msg.edit(content="Tearing down external category...")
-        
-                        for i in category.channels:
-                            await i.delete()
-        
-                        await category.delete()
-        
-                        await msg.edit(
-                            content="Teardown complete. Note that imported channels from that directory will no longer appear in the directory if you have it set up.")
-                        if ctx.guild.id in self.bot.univ.Directories:
-                            await self.bot.update_directory(ctx=ctx,
-                                                            note="External category deletion; Imported channels from that category now removed.")
-                        
-                        return
+                            await sleep(2)
+                            await msg.edit(content="Tearing down external category...")
 
+                            for i in category.channels:
+                                await i.delete()
+
+                            await category.delete()
+
+                            await msg.edit(
+                                content="Teardown complete. "
+                                        "Note that imported channels from that directory "
+                                        "will no longer appear in the directory if you have it set up.")
+                            if ctx.guild.id in self.bot.univ.Directories:
+                                await self.bot.update_directory(ctx=ctx,
+                                                                note="External category deletion; "
+                                                                     "Imported channels from that category now removed."
+                                                                )
+
+                            return
+
+    @cooldown(1, 5, BucketType.guild)
     @command(aliases=["new_ch"])
-    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
+    @bot_has_permissions(manage_channels=True, **required_permissions)
     @has_permissions(manage_channels=True)
     async def create_channel(self, ctx: Context, directory: str, name: str):
         if not ctx.guild:
@@ -454,8 +530,10 @@ class Commands(Cog):
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
             await ctx.message.delete()
-            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`", delete_after=5)
+            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
+                           delete_after=5)
             return
+
         else:
             with Loading(self.bot, ctx.guild.id):
 
@@ -489,12 +567,17 @@ class Commands(Cog):
                                     raise KeyError(str(path[-1]))
                                 else:
                                     if name in get_item:
-                                        await ctx.send("A channel or category in that directory already exists.", delete_after=5)
+                                        await ctx.send("A channel or category in that directory already exists.",
+                                                       delete_after=5)
                                         return
 
-                                    category = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
-                                    dchannel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
-                                    channel = await category.create_text_channel(f"finishing-creation", topic=f"Go back: {dchannel.mention}; Name: \"{name}\"")
+                                    category = self.bot.get_channel(
+                                        self.bot.univ.Directories[ctx.guild.id]["categoryID"])
+                                    dchannel = self.bot.get_channel(
+                                        self.bot.univ.Directories[ctx.guild.id]["channelID"])
+                                    channel = await category.create_text_channel(f"finishing-creation",
+                                                                                 topic=f"Go back: {dchannel.mention}; "
+                                                                                       f"Name: \"{name}\"")
                                     await channel.edit(name=str(f"{name}-{channel.id}"))
 
                                     get_item[name] = (channel.id, False)
@@ -506,19 +589,24 @@ class Commands(Cog):
                                 return
 
                             else:
-                                await self.bot.update_directory(ctx=ctx, note=f"New channel; Name: \"{name}\"; Path: \"{directory}\".")
+                                await self.bot.update_directory(ctx=ctx,
+                                                                note=f"New channel; Name: \"{name}\"; "
+                                                                     f"Path: \"{directory}\".")
                                 print(f"+ Added new channel to server \"{ctx.guild.name}\".")
                     else:
                         await ctx.send(
-                            f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
+                            f"This command must be used in the directory channel created by the bot.\n"
+                            f"Deleted it? Use the command `{self.bot.command_prefix}update`.")
                         return
                 else:
                     await ctx.send(
-                        f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
+                        f"You don't have a directory yet. "
+                        f"Use the `{self.bot.command_prefix}setup` command to create one.")
                     return
 
+    @cooldown(1, 5, BucketType.guild)
     @command(aliases=["new_cat"])
-    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
+    @bot_has_permissions(**required_permissions)
     @has_permissions(manage_channels=True)
     async def create_category(self, ctx, directory, name):
         if not ctx.guild:
@@ -527,7 +615,8 @@ class Commands(Cog):
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
             await ctx.message.delete()
-            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`", delete_after=5)
+            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
+                           delete_after=5)
             return
         else:
             with Loading(self.bot, ctx.guild.id):
@@ -547,12 +636,13 @@ class Commands(Cog):
                                            delete_after=10)
 
                             return
-                        
+
                         try:
                             get_item = recurse_index(self.bot.univ.Directories[ctx.guild.id]['tree'], d)
 
                         except KeyError as e:
-                            await ctx.send(f"That directory doesn't exist.\n`Invalid category name: {e}`", delete_after=5)
+                            await ctx.send(f"That directory doesn't exist.\n`Invalid category name: {e}`",
+                                           delete_after=5)
 
                         else:
                             if isinstance(get_item, int):
@@ -565,17 +655,22 @@ class Commands(Cog):
 
                                 get_item[name] = dict()
 
-                            await self.bot.update_directory(ctx=ctx, note=f"New category; Name: \"{name}\"; Path: \"{directory}\".")
+                            await self.bot.update_directory(ctx=ctx,
+                                                            note=f"New category; Name: \"{name}\"; "
+                                                                 f"Path: \"{directory}\".")
                             print(f"+ Added new category to server \"{ctx.guild.name}\".")
                     else:
                         await ctx.send(
-                            f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
+                            f"This command must be used in the directory channel created by the bot.\n"
+                            f"Deleted it? Use the command `{self.bot.command_prefix}update`.")
                 else:
                     await ctx.send(
-                        f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
+                        f"You don't have a directory yet. "
+                        f"Use the `{self.bot.command_prefix}setup` command to create one.")
 
+    @cooldown(1, 10, BucketType.guild)
     @command(aliases=["del_cat"])
-    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
+    @bot_has_permissions(manage_channels=True, **required_permissions)
     @has_permissions(manage_channels=True)
     async def delete_category(self, ctx, directory, name):
         if not ctx.guild:
@@ -584,14 +679,16 @@ class Commands(Cog):
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
             await ctx.message.delete()
-            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`", delete_after=5)
+            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
+                           delete_after=5)
             return
         else:
             with Loading(self.bot, ctx.guild.id):
 
                 if ctx.guild.id not in self.bot.univ.Directories:
                     await ctx.send(
-                        f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one."
+                        f"You don't have a directory yet. "
+                        f"Use the `{self.bot.command_prefix}setup` command to create one."
                     )
                     return
 
@@ -610,7 +707,7 @@ class Commands(Cog):
                                    "`A level is one position in your path: root(1)/level(2)/level(3)/etc(4)`",
                                    delete_after=10)
                     return
-                
+
                 get_item = recurse_index(self.bot.univ.Directories[ctx.guild.id]['tree'], path)
 
                 def recurse_delete_category(d: dict):
@@ -619,9 +716,9 @@ class Commands(Cog):
 
                     for key, val in d.items():
                         if isinstance(val, tuple):
-                            channel = self.bot.get_channel(val[0])
-                            if channel and not val[1]:
-                                yield channel
+                            _channel = self.bot.get_channel(val[0])
+                            if _channel and not val[1]:
+                                yield _channel
                         elif isinstance(val, dict):
                             yield from recurse_delete_category(val)
 
@@ -652,8 +749,9 @@ class Commands(Cog):
                     print(f"- Deleted category from server \"{ctx.guild.name}\".")
                     return
 
+    @cooldown(1, 5, BucketType.guild)
     @command(aliases=["rn_ch"])
-    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
+    @bot_has_permissions(manage_channels=True, **required_permissions)
     @has_permissions(manage_channels=True)
     async def rename_channel(self, ctx, directory, name, rename):
         if not ctx.guild:
@@ -662,8 +760,10 @@ class Commands(Cog):
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
             await ctx.message.delete()
-            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`", delete_after=5)
+            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
+                           delete_after=5)
             return
+
         else:
             with Loading(self.bot, ctx.guild.id):
 
@@ -673,16 +773,17 @@ class Commands(Cog):
 
                         path = directory.split("//")
                         if len(path) > 10:
-                            await ctx.send("You cannot rename a channel or category in a directory deeper than 10 levels.\n"
-                                           "`A level is one position in your path: root(1)/level(2)/level(3)/etc(4)`",
-                                           delete_after=10)
+                            await ctx.send(
+                                "You cannot rename a channel or category in a directory deeper than 10 levels.\n"
+                                "`A level is one position in your path: root(1)/level(2)/level(3)/etc(4)`",
+                                delete_after=10)
 
                             return
 
                         if len(name) > 50:
                             await ctx.send("\"name\" cannot be greater than 50 characters long.", delete_after=5)
                             return
-                        
+
                         if len(rename) > 50:
                             await ctx.send("\"name\" cannot be greater than 50 characters long.", delete_after=5)
                             return
@@ -694,25 +795,33 @@ class Commands(Cog):
                             if isinstance(get_item[rename], int):
                                 dchannel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
                                 channel = self.bot.get_channel(get_item[rename])
-                                await channel.edit(topic=f"Go back: {dchannel.mention}; Name: \"{rename}\"")
+                                await channel.edit(name=f"{rename}-{channel.id}",
+                                                   topic=f"Go back: {dchannel.mention}; Name: \"{rename}\"")
 
                         except KeyError as e:
-                            await ctx.send(f"That directory doesn't exist.\n`Invalid category name: {e}`", delete_after=5)
+                            await ctx.send(f"That directory doesn't exist.\n`Invalid category name: {e}`",
+                                           delete_after=5)
                             return
 
                         else:
-                            await self.bot.update_directory(ctx=ctx, note=f"Renamed channel \"{name}\" to \"{rename}\" in path \"{directory}\".")
+                            await self.bot.update_directory(ctx=ctx,
+                                                            note=f"Renamed channel \"{name}\" "
+                                                                 f"to \"{rename}\" in path \"{directory}\".")
+
                             print(f"= Renamed a channel for server \"{ctx.guild.name}\".")
                             return
                     else:
                         await ctx.send(
-                            f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
+                            f"This command must be used in the directory channel created by the bot.\n"
+                            f"Deleted it? Use the command `{self.bot.command_prefix}update`.")
                 else:
                     await ctx.send(
-                        f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
+                        f"You don't have a directory yet. "
+                        f"Use the `{self.bot.command_prefix}setup` command to create one.")
 
+    @cooldown(1, 5, BucketType.guild)
     @command(aliases=["mv_ch"])
-    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
+    @bot_has_permissions(**required_permissions)
     @has_permissions(manage_channels=True)
     async def move_channel(self, ctx, directory, name, new_directory):
         if not ctx.guild:
@@ -721,7 +830,8 @@ class Commands(Cog):
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
             await ctx.message.delete()
-            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`", delete_after=5)
+            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
+                           delete_after=5)
             return
         else:
             with Loading(self.bot, ctx.guild.id):
@@ -738,14 +848,14 @@ class Commands(Cog):
                                            delete_after=10)
 
                             return
-                        
+
                         if len(new_path) > 10:
                             await ctx.send("You cannot move a channel to a directory deeper than 10 levels.\n"
                                            "`A level is one position in your path: root(1)/level(2)/level(3)/etc(4)`",
                                            delete_after=10)
 
                             return
-                        
+
                         if len(name) > 50:
                             await ctx.send("\"name\" cannot be greater than 15 characters long.", delete_after=5)
                             return
@@ -763,30 +873,36 @@ class Commands(Cog):
                                 return
 
                         except KeyError as e:
-                            await ctx.send(f"That directory doesn't exist.\n`Invalid category name: \"{e}\"`", delete_after=5)
+                            await ctx.send(f"That directory doesn't exist.\n`Invalid category name: \"{e}\"`",
+                                           delete_after=5)
                             return
 
                         try:
                             get_new_item[name] = branch
 
                         except KeyError as e:
-                            await ctx.send(f"That directory doesn't exist.\n`Invalid category name: {e}`", delete_after=5)
+                            await ctx.send(f"That directory doesn't exist.\n`Invalid category name: {e}`",
+                                           delete_after=5)
                             return
 
                         else:
                             await self.bot.update_directory(ctx=ctx,
-                                                            note=f"Moved channel \"{name}\" from path \"{directory}\" to \"{new_directory}\".")
+                                                            note=f"Moved channel \"{name}\" "
+                                                                 f"from path \"{directory}\" to \"{new_directory}\".")
                             print(f"= Moved a channel for server \"{ctx.guild.name}\".")
                             return
                     else:
                         await ctx.send(
-                            f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
+                            f"This command must be used in the directory channel created by the bot.\n"
+                            f"Deleted it? Use the command `{self.bot.command_prefix}update`.")
                 else:
                     await ctx.send(
-                        f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
+                        f"You don't have a directory yet. "
+                        f"Use the `{self.bot.command_prefix}setup` command to create one.")
 
+    @cooldown(1, 5, BucketType.guild)
     @command(aliases=["imp_ch"])
-    @bot_has_permissions(send_messages=True, manage_messages=True)
+    @bot_has_permissions(**required_permissions)
     @has_permissions(manage_channels=True)
     async def import_channel(self, ctx, channel: TextChannel, new_directory, name):
         if not ctx.guild:
@@ -795,7 +911,8 @@ class Commands(Cog):
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
             await ctx.message.delete()
-            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`", delete_after=5)
+            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
+                           delete_after=5)
             return
         else:
             with Loading(self.bot, ctx.guild.id):
@@ -811,9 +928,9 @@ class Commands(Cog):
                                            delete_after=10)
 
                             return
-                        
+
                         get_item = recurse_index(self.bot.univ.Directories[ctx.guild.id]['tree'], path)
-                        
+
                         try:
                             if name not in get_item:
                                 get_item[name] = (channel.id, True)
@@ -824,22 +941,28 @@ class Commands(Cog):
                                 return
 
                         except KeyError as e:
-                            await ctx.send(f"That directory doesn't exist.\n`Invalid category name: {e}`", delete_after=5)
+                            await ctx.send(f"That directory doesn't exist.\n`Invalid category name: {e}`",
+                                           delete_after=5)
                             return
 
-                        await self.bot.update_directory(ctx=ctx, note=f"Imported channel with name \"{name}\"; Path: \"{new_directory}\".")
+                        await self.bot.update_directory(ctx=ctx,
+                                                        note=f"Imported channel with name \"{name}\"; "
+                                                             f"Path: \"{new_directory}\".")
                         print(f"> Imported channel into directory for server \"{ctx.guild.name}\".")
                         return
 
                     else:
                         await ctx.send(
-                            f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
+                            f"This command must be used in the directory channel created by the bot.\n"
+                            f"Deleted it? Use the command `{self.bot.command_prefix}update`.")
                 else:
                     await ctx.send(
-                        f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
+                        f"You don't have a directory yet. "
+                        f"Use the `{self.bot.command_prefix}setup` command to create one.")
 
+    @cooldown(1, 5, BucketType.guild)
     @command(aliases=["hd"])
-    @bot_has_permissions(send_messages=True, manage_messages=True)
+    @bot_has_permissions(**required_permissions)
     @has_permissions(manage_channels=True)
     async def hide_channel(self, ctx, directory, name):
         if not ctx.guild:
@@ -848,7 +971,8 @@ class Commands(Cog):
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
             await ctx.message.delete()
-            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`", delete_after=5)
+            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
+                           delete_after=5)
             return
         else:
             with Loading(self.bot, ctx.guild.id):
@@ -858,7 +982,7 @@ class Commands(Cog):
                         await ctx.message.delete()
 
                         path = directory.split("//")
-                        
+
                         if len(path) > 10:
                             await ctx.send("You cannot hide a channel in a directory deeper than 10 levels.\n"
                                            "`A level is one position in your path: root(1)/level(2)/level(3)/etc(4)`",
@@ -876,21 +1000,28 @@ class Commands(Cog):
                                 return
 
                         except KeyError as e:
-                            await ctx.send(f"That directory doesn't exist.\n`Invalid category name: \"{e}\"`", delete_after=5)
+                            await ctx.send(f"That directory doesn't exist.\n`Invalid category name: \"{e}\"`",
+                                           delete_after=5)
                             return
 
-                        await self.bot.update_directory(ctx=ctx, note=f"Removed channel from directory, but was not deleted. Name: \"{name}\"; From Path: \"{directory}\".")
+                        await self.bot.update_directory(ctx=ctx,
+                                                        note=f"Removed channel from directory, but was not deleted. "
+                                                             f"Name: \"{name}\"; From Path: \"{directory}\".")
+
                         print(f"< Hidden channel from directory for server \"{ctx.guild.name}\".")
                         return
                     else:
                         await ctx.send(
-                            f"This command must be used in the directory channel created by the bot.\nDeleted it? Use the command `{self.bot.command_prefix}update`.")
+                            f"This command must be used in the directory channel created by the bot.\n"
+                            f"Deleted it? Use the command `{self.bot.command_prefix}update`.")
                 else:
                     await ctx.send(
-                        f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
+                        f"You don't have a directory yet. "
+                        f"Use the `{self.bot.command_prefix}setup` command to create one.")
 
+    @cooldown(1, 120, BucketType.guild)
     @command(aliases=["save"])
-    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True, attach_files=True)
+    @bot_has_permissions(**required_permissions)
     async def save_directory(self, ctx):
         if not ctx.guild:
             await ctx.send("This command cannot be used in a DM channel.")
@@ -898,7 +1029,8 @@ class Commands(Cog):
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
             await ctx.message.delete()
-            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`", delete_after=5)
+            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
+                           delete_after=5)
             return
         else:
             with Loading(self.bot, ctx.guild.id):
@@ -922,53 +1054,58 @@ class Commands(Cog):
                     await ctx.send(f"This file contains pickled data using Python. "
                                    f"Use the command `{self.bot.command_prefix}setup` and attach the file to load it.",
                                    file=file)
-                    
+
                     remove(f"{self.bot.cwd}/Workspace/cdr_directory.pkl")
-                    
+
                     print(f"|| Sent file data from directory to server \"{ctx.guild.name}\".")
                     return
                 else:
                     await ctx.send(
-                        f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
+                        f"You don't have a directory yet. "
+                        f"Use the `{self.bot.command_prefix}setup` command to create one.")
 
-    @command(aliases=["preview"])
+    @cooldown(1, 5, BucketType.guild)
+    @command(aliases=["preview", "pvd"])
+    @bot_has_permissions(**required_permissions)
     async def preview_directory(self, ctx):
-        while True:
-            if ctx.guild.id in self.bot.univ.Directories and ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
-                await ctx.message.delete()
-                await ctx.send("You cannot use that command here.", delete_after=5)
+        if ctx.guild and ctx.guild.id in self.bot.univ.Directories and \
+                ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
+            await ctx.message.delete()
+            await ctx.send("You cannot use that command here.", delete_after=5)
+            return
+
+        message_lines = ["Here is an approximate preview of the file you sent:\n"]
+        if ctx.message.attachments:
+            file = None
+            for i in ctx.message.attachments:
+                if i.filename == f"cdr_directory.pkl":
+                    file = i
+                    break
+
+            if file is None:
+                await ctx.send(
+                    "You don't have a file named \"cdr_directory.pkl\" attached.\n"
+                    "Also make sure that it is a valid Python Pickle file. These are encoded in pure bytes.")
                 return
+        else:
+            await ctx.send("You haven't attached anything to check for.")
+            return
 
-            message_lines = ["Here is an approximate preview of the file you sent:\n"]
-            if ctx.message.attachments:
-                file = None
-                for i in ctx.message.attachments:
-                    if i.filename == f"cdr_directory.pkl":
-                        file = i
-                        break
+        await file.save(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl")
+        with open(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl", "rb") as f:
+            data = Unpickler(f).load()  # TODO: WARNING: USERS CAN UPLOAD MALICIOUS .PKLs MAKING THIS INSECURE
 
-                if file is None:
-                    await ctx.send("You don't have a file named \"cdr_directory.pkl\" attached.\nAlso make sure that it is a valid Python Pickle file. These are encoded in pure bytes.")
-                    return
-            else:
-                await ctx.send("You haven't attached anything to check for.")
-                return
-
-            await file.save(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl")
-            with open(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl", "rb") as f:
-                data = Unpickler(f).load()  # TODO: WARNING: USERS CAN UPLOAD MALICIOUS .PKLs MAKING THIS INSECURE
-
-            result = self.bot.recurse_read(data["root"], message_lines, preview=True)
-            
             remove(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl")
 
+        while True:
+            result = self.bot.recurse_read(data["root"], message_lines, preview=True)
             if isinstance(result, dict):
                 data["root"] = result
                 continue
 
             else:
                 if not list(data["root"].items()):
-                    await ctx.author.send(
+                    await ctx.send(
                         ":exclamation: The file you sent is empty."
                     )
                     break
@@ -977,6 +1114,9 @@ class Commands(Cog):
                     message_full = "\n".join(message_lines)
                     try:
                         await ctx.author.send(content=message_full)
+                        if ctx.guild:
+                            await ctx.send("I sent you a Direct Message with your preview.")
+
                         break
 
                     except HTTPException as e:
@@ -984,16 +1124,14 @@ class Commands(Cog):
                             ":exclamation: The directory in the file you sent is too large to be sent as a message. "
                             "A fix will be implemented in the future.\n"
                             "If this is not the case, it is likely a network or Discord error. "
-                            f"Please try again.\n`Error description: [{e}]`",
+                            f"Please try again.\n"
+                            f"`Error description: [{e}]`",
                         )
                         break
 
-        with ctx.channel.typing():
-            await sleep(0.5)
-            await ctx.send("I sent you a Direct Message with your preview.")
-
     @command()
-    @bot_has_permissions(send_messages=True, manage_channels=True, manage_messages=True)
+    @cooldown(1, 10, BucketType.guild)
+    @bot_has_permissions(**required_permissions)
     @has_permissions(manage_channels=True)
     async def update(self, ctx):
         if not ctx.guild:
@@ -1002,7 +1140,8 @@ class Commands(Cog):
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
             await ctx.message.delete()
-            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`", delete_after=5)
+            await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
+                           delete_after=5)
             return
         else:
             with Loading(self.bot, ctx.guild.id):
@@ -1018,7 +1157,8 @@ class Commands(Cog):
                     return
                 else:
                     await ctx.send(
-                        f"You don't have a directory yet. Use the `{self.bot.command_prefix}setup` command to create one.")
+                        f"You don't have a directory yet. "
+                        f"Use the `{self.bot.command_prefix}setup` command to create one.")
 
 
 def setup(bot: Bot):
