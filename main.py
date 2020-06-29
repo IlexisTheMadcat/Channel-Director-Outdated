@@ -34,16 +34,29 @@ with open(join(getcwd(), "Serialized", "bot_config.pkl"), "rb") as f:
             debug_mode = config_data["debug_mode"]
             auto_pull = config_data["auto_pull"]
             prefix = config_data["prefix"]
+            button_ids = config_data["button_ids"]
             print(f"Loaded bot_config.pkl{' '*20}")
         except KeyError:
             print(f'[Using defaults] bot_config.pkl file improperly formatted.{" "*35}')
             # print excess spaces to fully overwrite the '\r' above
+
             debug_mode = False
             # Print exceptions to stdout.
             # Some errors will not be printed for some reason, such as NameError outside of commands.
+
             auto_pull = True
             # Auto pulls github updates every minute and reloads all loaded cogs.
-            prefix = "cdr:"
+
+            prefix = "cdr:"  # Bot Prefix
+
+            button_ids = {"create_ch": None,
+                          "create_cat": None,
+                          "delete_cat": None,
+                          "rename": None,
+                          "move": None,
+                          "import": None,
+                          "hide": None}
+            # Custom emoji ids
 
 print("#-------------------------------#\n")
 loading_choices = [  # because why not
