@@ -6,16 +6,14 @@ from datetime import datetime
 from os import getcwd
 from os.path import exists
 from pickle import dump, Unpickler
-from random import randint
 from re import match
 from typing import List, Tuple
 
 # Site
 from dbl.client import DBLClient
 from dbl.errors import DBLException
-from discord import Message
 from discord.channel import TextChannel
-from discord.errors import HTTPException, NotFound, Forbidden
+from discord.errors import HTTPException, NotFound
 from discord.ext.commands.bot import Bot as DiscordBot
 from discord.ext.commands.context import Context
 from discord.ext.commands.converter import IDConverter
@@ -198,6 +196,17 @@ class Bot(DiscordBot):
         # Capture extra meta from init for cogs, former `global`s
         self.auto_pull = kwargs.pop("auto_pull", True)
         self.debug_mode = kwargs.pop("debug_mode", False)
+        self.buttons = kwargs.pop("button_ids",
+                                  {
+                                      "create_ch": None,
+                                      "create_cat": None,
+                                      "delete_cat": None,
+                                      "rename": None,
+                                      "move": None,
+                                      "import": None,
+                                      "hide": None
+                                  }
+                                  )
 
         # Attribute for accessing tokens from file
         self.auth = PickleInterface(f"{self.cwd}/Serialized/tokens.pkl")
