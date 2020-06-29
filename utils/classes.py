@@ -358,7 +358,7 @@ class Bot(DiscordBot):
                     d[key] = ret
                     return d
 
-            elif isinstance(val, dict):
+            elif isinstance(val, dict) and preview:
                 category = f"**{'ーー' * depth} Category: [** {key} **]**"
                 ret = self.recurse_read(val, lines, depth + 1, category, preview=True)
 
