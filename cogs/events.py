@@ -1,11 +1,11 @@
 
 # Lib
-
-# Site
 from asyncio import sleep
 from contextlib import suppress
 from copy import deepcopy
 
+# Site
+from discord import Reaction, User
 from discord.channel import CategoryChannel
 from discord.ext.commands.context import Context
 from discord.ext.commands.cog import Cog
@@ -80,6 +80,17 @@ class Events(Cog):
                     await msg.add_reaction("👋")
             except Forbidden:
                 pass
+
+    @Cog.listener()
+    async def on_reaction_add(self, reaction: Reaction, user: User):
+        if reaction.message.guild and reaction.message.guild.id in self.bot.univ.Directories:
+            if reaction.message.id == self.bot.univ.Directories["messageID"]:
+                await reaction.remove(user)
+                if str(reaction.emoji) == "🔄":
+                    pass
+
+                elif reaction.emoji.id in self.bot.buttons:
+                    pass
 
     # Errors
     @Cog.listener()
@@ -211,8 +222,8 @@ class Events(Cog):
                     await ctx.message.add_reaction("❌")
 
                 await msg.author.send(
-                    f"That command is on a {error.cooldown.per} second cooldown.\n"
-                    f"Retry in {error.retry_after} seconds."
+                    f"That command is on a {round(error.cooldown.per)} second cooldown.\n"
+                    f"Retry in {round(error.retry_after)} seconds."
                 )
 
             else:
