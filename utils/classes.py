@@ -347,8 +347,7 @@ class Bot(DiscordBot):
                         lines.append(f"{'ーー' * depth} **[** {key} **>>>** ||{channel.mention}||")
 
             elif val is None and preview:
-                rand_id = randint(650000000000000000, 699999999999999999)
-                lines.append(f"{'ーー' * depth} **[** {key} **>>>** ||{key.lower().replace(' ', '-')}-{rand_id}||")
+                lines.append(f"{'ーー' * depth} **[** {key} **>>>** ||{key.lower().replace(' ', '-')}-000000000000000000||")
 
             elif isinstance(val, dict) and not preview:
                 category = f"**{'ーー' * depth} Category: [** {key} **]**"
@@ -371,8 +370,7 @@ class Bot(DiscordBot):
     async def update_directory(self, ctx, note="..."):
         """Update the directory associated with a guild"""
         if ctx.guild.id not in self.univ.Directories:
-            with suppress(Forbidden):
-                return
+            return
 
         # ctx must meet the requirements for accessing .guild and a Messageable
 
