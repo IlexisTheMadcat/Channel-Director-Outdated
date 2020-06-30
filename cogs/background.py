@@ -78,8 +78,7 @@ class BackgroundTasks(Cog):
             config_data = {
                 "debug_mode": self.bot.debug_mode,
                 "auto_pull": self.bot.auto_pull,
-                "prefix": self.bot.command_prefix,
-                "button_ids": self.bot.buttons
+                "prefix": self.bot.command_prefix
             }
 
             try:
