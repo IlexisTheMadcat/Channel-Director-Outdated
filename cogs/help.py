@@ -6,8 +6,7 @@ from datetime import datetime
 from os.path import exists
 
 from discord import Embed, Permissions, AppInfo
-from discord.ext import commands
-from discord.ext.commands import Context, command
+from discord.ext.commands import Context, command, bot_has_permissions
 from discord.ext.commands.cog import Cog
 from discord.utils import oauth_url
 
@@ -19,16 +18,8 @@ class MiscCommands(Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @staticmethod
-    def color(ctx: Context):
-        """Color for embeds"""
-
-        if ctx.guild:
-            return ctx.guild.me.color
-        else:
-            return int(0x000000)
-    
     @command()
+    @bot_has_permissions(send_messages=True)
     async def invite(self, ctx: Context):
         """Sends an OAuth bot invite URL"""
 
@@ -48,13 +39,13 @@ class MiscCommands(Cog):
             title=f'OAuth URL for {self.bot.user.name}',
             description=f'[Click Here]'
                         f'({oauth_url(app_info.id, permissions)}) '
-                        f'to invite me to your guild.',
+                        f'to invite me to your server.',
             color=0xaaeaff
         )
         await ctx.send(embed=em)
-     
-    @commands.command(name="help")
-    @commands.bot_has_permissions(send_messages=True)
+
+    @command(name="help")
+    @bot_has_permissions(send_messages=True)
     async def bhelp(self, ctx, section="directory", subsection=None):
         BOT_PREFIX = self.bot.command_prefix
         em = Embed(title="Rem: Help", color=0xaaeaff)

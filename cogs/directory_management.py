@@ -1,5 +1,6 @@
 # Lib
 from contextlib import suppress
+from copy import deepcopy
 from os import remove
 from asyncio import TimeoutError, sleep
 from pickle import Unpickler, dump
@@ -15,7 +16,7 @@ from discord.file import File
 
 # Local
 from utils.classes import Bot
-from utils.directory_mgmt import recurse_index, LoadingUpdate_contextmanager as Loading
+from utils.directory_mgmt import recurse_index, loadingupdate as loading
 
 required_permissions_total = {
     "manage_channels": True,
@@ -48,12 +49,11 @@ class Commands(Cog):
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.message.delete()
             await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
                            delete_after=5)
             return
         else:
-            with Loading(self.bot, ctx.guild.id):
+            with loading(self.bot, ctx.guild.id):
 
                 if ctx.guild.id in self.bot.univ.Directories:
                     msg = await ctx.send("You already have a directory tree set up. Continue anyway?\n"
@@ -106,6 +106,7 @@ class Commands(Cog):
                             await msg.clear_reactions()
                             await sleep(2)
                             await msg.edit(content="Okay, I canceled the operation.")
+                            ctx.command.reset_cooldown(ctx)
 
                             return
 
@@ -164,6 +165,7 @@ class Commands(Cog):
                             await msg.clear_reactions()
                             await sleep(2)
                             await msg.edit(content="Okay, I canceled the operation.")
+                            ctx.command.reset_cooldown(ctx)
 
                             return
 
@@ -233,75 +235,106 @@ class Commands(Cog):
                                         "you create a channel using the special command that I provide to you.\n"
                                         "Also, make sure I have access to all channels added.\n"
                                         "You are free to move this channel, but it's best to leave on top.")
+
+                                    await dmessage.add_reaction("1️⃣")
+                                    await dmessage.add_reaction("2️⃣")
+                                    await dmessage.add_reaction("3️⃣")
+                                    await dmessage.add_reaction("4️⃣")
+                                    await dmessage.add_reaction("5️⃣")
+                                    await dmessage.add_reaction("6️⃣")
+                                    await dmessage.add_reaction("7️⃣")
+                                    await dmessage.add_reaction("🔄")
+
                                     await msg.edit(
                                         content=f"Finished setup. Get to the directory here: {directory.mention}")
 
                                     self.bot.univ.Directories.update(
-                                        {ctx.guild.id: {"categoryID": cat.id, "channelID": directory.id,
-                                                        "msgID": dmessage.id, "tree": {"root": {}}}})
+                                        {ctx.guild.id: {"categoryID": cat.id,
+                                                        "channelID": directory.id,
+                                                        "messageID": dmessage.id,
+                                                        "tree": {
+                                                            "root": {}
+                                                            }
+                                                        }
+                                         }
+                                    )
 
                                     return
 
-                                await msg.edit(content="You've attached a valid file to your message.\n"
-                                                       "Do you want to attempt to load it?\n"
-                                                       "`[✅] (=================)`"
-                                               )
+                                elif str(reaction.emoji) == "✅":
+                                    await msg.edit(content="You've attached a valid file to your message.\n"
+                                                           "Do you want to attempt to load it?\n"
+                                                           "`[✅] (=================)`"
+                                                   )
 
-                                await sleep(2)
-                                await msg.edit(content="Setting up with attached file...")
+                                    await sleep(2)
+                                    await msg.edit(content="Setting up with attached file...")
 
-                                await file.save(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl")
-                                with open(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl", "rb") as f:
+                                    await file.save(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl")
+                                    with open(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl", "rb") as f:
+                                        try:
+                                            tree = Unpickler(f).load()
+                                            # TODO: WARNING: USERS CAN UPLOAD MALICIOUS .PKLs MAKING THIS INSECURE.
+
+                                        except Exception as e:
+                                            await msg.edit(
+                                                content=f"The setup failed because the file is either changed, "
+                                                        f"corrupted, or outdated.\n"
+                                                        f"`Error description: {e}`")
+
+                                            return
+
+                                    remove(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl")
+
+                                    cat = await ctx.guild.create_category("Directory Archive")
+                                    directory = await cat.create_text_channel("directory",
+                                                                              topic="Managers: Leave this channel "
+                                                                                    "on top for easy access. "
+                                                                                    "Also do not delete it.")
+
+                                    await directory.set_permissions(ctx.guild.default_role, send_messages=False)
+                                    member_self = await ctx.guild.fetch_member(self.bot.user.id)
+                                    await directory.set_permissions(member_self, send_messages=True)
+                                    await directory.set_permissions(ctx.author, send_messages=True)
+
+                                    dmessage = await directory.send("Adding controls...")
+
+                                    await dmessage.add_reaction("1️⃣")
+                                    await dmessage.add_reaction("2️⃣")
+                                    await dmessage.add_reaction("3️⃣")
+                                    await dmessage.add_reaction("4️⃣")
+                                    await dmessage.add_reaction("5️⃣")
+                                    await dmessage.add_reaction("6️⃣")
+                                    await dmessage.add_reaction("7️⃣")
+                                    await dmessage.add_reaction("🔄")
+
+                                    await dmessage.edit(content="Adding channels")
+
                                     try:
-                                        tree = Unpickler(f).load()
-                                        # TODO: WARNING: USERS CAN UPLOAD MALICIOUS .PKLs MAKING THIS INSECURE.
+                                        self.bot.univ.Directories.update({ctx.guild.id: {"categoryID": cat.id,
+                                                                                         "channelID": directory.id,
+                                                                                         "messageID": dmessage.id,
+                                                                                         "tree": {}}})
 
-                                    except Exception as e:
+                                        tree = await self.bot.convert_to_directory(ctx, tree)
+                                        self.bot.univ.Directories[ctx.guild.id]["tree"] = tree
+                                    except TypeError as e:
+                                        self.bot.univ.Directories.pop(ctx.guild.id)
+                                        for i in cat.channels:
+                                            await i.delete()
+
+                                        await cat.delete()
                                         await msg.edit(
-                                            content=f"The setup failed because the file is either changed, "
-                                                    f"corrupted, or outdated.\n"
+                                            content=f"The setup failed because the file does not contain valid data.\n"
                                                     f"`Error description: {e}`")
 
                                         return
-
-                                remove(f"{self.bot.cwd}/Workspace/incoming_{ctx.guild.id}.pkl")
-
-                                cat = await ctx.guild.create_category("Directory Archive")
-                                directory = await cat.create_text_channel("directory",
-                                                                          topic="Managers: Leave this channel "
-                                                                                "on top for easy access. "
-                                                                                "Also do not delete it.")
-
-                                await directory.set_permissions(ctx.guild.default_role, send_messages=False)
-                                member_self = await ctx.guild.fetch_member(self.bot.user.id)
-                                await directory.set_permissions(member_self, send_messages=True)
-                                await directory.set_permissions(ctx.author, send_messages=True)
-
-                                dmessage = await directory.send("Adding channels...")
-
-                                try:
-                                    self.bot.univ.Directories.update({ctx.guild.id: {"categoryID": cat.id,
-                                                                                     "channelID": directory.id,
-                                                                                     "msgID": dmessage.id, "tree": {}}})
-                                    tree = await self.bot.convert_to_directory(ctx, tree)
-                                    self.bot.univ.Directories[ctx.guild.id]["tree"] = tree
-                                except TypeError as e:
-                                    self.bot.univ.Directories.pop(ctx.guild.id)
-                                    for i in cat.channels:
-                                        await i.delete()
-
-                                    await cat.delete()
-                                    await msg.edit(
-                                        content=f"The setup failed because the file does not contain valid data.\n"
-                                                f"`Error description: {e}`")
+                                    else:
+                                        await self.bot.update_directory(ctx=ctx, note="Finished automated setup.")
+                                        await msg.edit(
+                                            content=f"Finished setup. Get to the directory here: {directory.mention}")
 
                                     return
-                                else:
-                                    await self.bot.update_directory(ctx=ctx, note="Finished automated setup.")
-                                    await msg.edit(
-                                        content=f"Finished setup. Get to the directory here: {directory.mention}")
-
-                                return
                         else:
                             await msg.clear_reactions()
 
@@ -321,13 +354,24 @@ class Commands(Cog):
                                 "you create a channel using the special command that I provide to you.\n"
                                 "Also, make sure I have access to all channels added.\n"
                                 "You are free to move this channel, but it's best to leave on top.")
+
+                            await dmessage.add_reaction("1️⃣")
+                            await dmessage.add_reaction("2️⃣")
+                            await dmessage.add_reaction("3️⃣")
+                            await dmessage.add_reaction("4️⃣")
+                            await dmessage.add_reaction("5️⃣")
+                            await dmessage.add_reaction("6️⃣")
+                            await dmessage.add_reaction("7️⃣")
+                            await dmessage.add_reaction("🔄")
+
                             await msg.edit(content=f"Finished setup. Get to the directory here: {directory.mention}")
 
                             self.bot.univ.Directories.update(
                                 {ctx.guild.id: {"categoryID": cat.id,
                                                 "channelID": directory.id,
-                                                "msgID": dmessage.id,
-                                                "tree": {"root": {}
+                                                "messageID": dmessage.id,
+                                                "tree": {
+                                                    "root": {}
                                                          }
                                                 }
                                  }
@@ -345,18 +389,17 @@ class Commands(Cog):
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.message.delete()
             await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
                            delete_after=5)
             return
         else:
-            with Loading(self.bot, ctx.guild.id):
+            with loading(self.bot, ctx.guild.id):
 
                 if categoryid == 0:
                     if ctx.guild.id in self.bot.univ.Directories:
                         if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
-                            await ctx.message.delete()
                             await ctx.send("You can't do that here!", delete_after=5)
+                            ctx.command.reset_cooldown(ctx)
 
                             return
 
@@ -391,6 +434,7 @@ class Commands(Cog):
                                             "using the `save_directory` command.\n"
                                             "`[❎] (=================)`"
                                     )
+                                ctx.command.reset_cooldown(ctx)
 
                                 await sleep(2)
                                 await msg.edit(content="Okay, I canceled the operation.")
@@ -485,7 +529,8 @@ class Commands(Cog):
                                         "Confirm: You are deleting an external category. "
                                         "This will delete **EVERY** channel under it.\n"
                                         "`[❎] (=================)`"
-                            )
+                                )
+                            ctx.command.reset_cooldown(ctx)
 
                             await sleep(2)
                             await msg.edit(content="Okay, I canceled the operation.")
@@ -529,18 +574,15 @@ class Commands(Cog):
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.message.delete()
             await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
                            delete_after=5)
             return
 
         else:
-            with Loading(self.bot, ctx.guild.id):
+            with loading(self.bot, ctx.guild.id):
 
                 if ctx.guild.id in self.bot.univ.Directories:
                     if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
-                        await ctx.message.delete()
-
                         if len(name) > 50:
                             await ctx.send("\"name\" cannot be greater than 50 characters long.", delete_after=5)
 
@@ -563,7 +605,7 @@ class Commands(Cog):
 
                         else:
                             try:
-                                if isinstance(get_item, int):
+                                if isinstance(get_item, tuple):
                                     raise KeyError(str(path[-1]))
                                 else:
                                     if name in get_item:
@@ -578,6 +620,7 @@ class Commands(Cog):
                                     channel = await category.create_text_channel(f"finishing-creation",
                                                                                  topic=f"Go back: {dchannel.mention}; "
                                                                                        f"Name: \"{name}\"")
+
                                     await channel.edit(name=str(f"{name}-{channel.id}"))
 
                                     get_item[name] = (channel.id, False)
@@ -614,17 +657,14 @@ class Commands(Cog):
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.message.delete()
             await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
                            delete_after=5)
             return
         else:
-            with Loading(self.bot, ctx.guild.id):
+            with loading(self.bot, ctx.guild.id):
 
                 if ctx.guild.id in self.bot.univ.Directories:
                     if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
-                        await ctx.message.delete()
-
                         if len(name) > 50:
                             await ctx.send("\"name\" cannot be greater than 50.", delete_after=5)
                             return
@@ -645,7 +685,7 @@ class Commands(Cog):
                                            delete_after=5)
 
                         else:
-                            if isinstance(get_item, int):
+                            if isinstance(get_item, tuple):
                                 raise KeyError(str(d[-1]))
                             else:
                                 if name in get_item:
@@ -678,12 +718,11 @@ class Commands(Cog):
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.message.delete()
             await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
                            delete_after=5)
             return
         else:
-            with Loading(self.bot, ctx.guild.id):
+            with loading(self.bot, ctx.guild.id):
 
                 if ctx.guild.id not in self.bot.univ.Directories:
                     await ctx.send(
@@ -698,8 +737,6 @@ class Commands(Cog):
                         f"Deleted it? Use the command `{self.bot.command_prefix}update`."
                     )
                     return
-
-                await ctx.message.delete()
 
                 path = directory.split("//")
                 if len(path) > 10:
@@ -759,18 +796,15 @@ class Commands(Cog):
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.message.delete()
             await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
                            delete_after=5)
             return
 
         else:
-            with Loading(self.bot, ctx.guild.id):
+            with loading(self.bot, ctx.guild.id):
 
                 if ctx.guild.id in self.bot.univ.Directories:
                     if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
-                        await ctx.message.delete()
-
                         path = directory.split("//")
                         if len(path) > 10:
                             await ctx.send(
@@ -792,9 +826,9 @@ class Commands(Cog):
 
                         try:
                             get_item[rename] = get_item.pop(name)
-                            if isinstance(get_item[rename], int):
+                            if isinstance(get_item[rename], tuple):
                                 dchannel = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["channelID"])
-                                channel = self.bot.get_channel(get_item[rename])
+                                channel = self.bot.get_channel(get_item[rename][0])
                                 await channel.edit(name=f"{rename}-{channel.id}",
                                                    topic=f"Go back: {dchannel.mention}; Name: \"{rename}\"")
 
@@ -829,17 +863,14 @@ class Commands(Cog):
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.message.delete()
             await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
                            delete_after=5)
             return
         else:
-            with Loading(self.bot, ctx.guild.id):
+            with loading(self.bot, ctx.guild.id):
 
                 if ctx.guild.id in self.bot.univ.Directories:
                     if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
-                        await ctx.message.delete()
-
                         path = directory.split("//")
                         new_path = new_directory.split("//")
                         if len(path) > 10:
@@ -860,11 +891,18 @@ class Commands(Cog):
                             await ctx.send("\"name\" cannot be greater than 15 characters long.", delete_after=5)
                             return
 
-                        get_item = recurse_index(self.bot.univ.Directories[ctx.guild.id]['tree'], path)
-                        get_new_item = recurse_index(self.bot.univ.Directories[ctx.guild.id]['tree'], new_path)
+                        try:
+                            get_item = recurse_index(self.bot.univ.Directories[ctx.guild.id]['tree'], path)
+                        except KeyError as e:
+                            return await ctx.send(f"The starting directory does not exist. Level `{e}` not found.")
 
                         try:
-                            if name not in self.bot.univ.Directories[ctx.guild.id]["tree"][new_path[0]]:
+                            get_new_item = recurse_index(self.bot.univ.Directories[ctx.guild.id]['tree'], new_path)
+                        except KeyError as e:
+                            return await ctx.send(f"The destination directory does not exist. Level `{e}` not found.")
+
+                        try:
+                            if name not in get_new_item:
                                 branch = get_item.pop(name)
                             else:
                                 await ctx.send(
@@ -910,23 +948,37 @@ class Commands(Cog):
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.message.delete()
             await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
                            delete_after=5)
             return
         else:
-            with Loading(self.bot, ctx.guild.id):
+            with loading(self.bot, ctx.guild.id):
 
                 if ctx.guild.id in self.bot.univ.Directories:
                     if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
-                        await ctx.message.delete()
-
                         path = new_directory.split("//")
                         if len(path) > 10:
                             await ctx.send("You cannot import a channel to a directory deeper than 10 levels.\n"
                                            "`A level is one position in your path: root(1)/level(2)/level(3)/etc(4)`",
                                            delete_after=10)
 
+                            return
+
+                        tree = deepcopy(self.bot.univ.Directories[ctx.guild.id]["tree"])
+                        while True:
+                            ids = self.bot.get_all_ids(tree, c_ids=list())
+                            if isinstance(ids, dict):
+                                tree = ids
+                                continue
+                            elif isinstance(ids, list):
+                                break
+
+                        if isinstance(ids, list):
+                            if channel.id in ids:
+                                return await ctx.send("That channel is already in the directory. "
+                                                      "It was either created with the new system, or already imported.",
+                                                      delete_after=10)
+                        else:
                             return
 
                         get_item = recurse_index(self.bot.univ.Directories[ctx.guild.id]['tree'], path)
@@ -970,17 +1022,14 @@ class Commands(Cog):
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.message.delete()
             await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
                            delete_after=5)
             return
         else:
-            with Loading(self.bot, ctx.guild.id):
+            with loading(self.bot, ctx.guild.id):
 
                 if ctx.guild.id in self.bot.univ.Directories:
                     if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
-                        await ctx.message.delete()
-
                         path = directory.split("//")
 
                         if len(path) > 10:
@@ -1028,16 +1077,14 @@ class Commands(Cog):
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.message.delete()
             await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
                            delete_after=5)
             return
         else:
-            with Loading(self.bot, ctx.guild.id):
+            with loading(self.bot, ctx.guild.id):
 
                 if ctx.guild.id in self.bot.univ.Directories:
                     if ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
-                        await ctx.message.delete()
                         await ctx.send("You cannot use that command here.", delete_after=5)
                         return
 
@@ -1046,16 +1093,19 @@ class Commands(Cog):
                     except FileExistsError:
                         pass
 
-                    with open(f"{self.bot.cwd}/Workspace/cdr_directory.pkl", "wb+") as f:
+                    with open(f"{self.bot.cwd}/Workspace/cdr_directory_{ctx.guild.id}.pkl", "wb") as f:
                         data = await self.bot.convert_to_readable(ctx=ctx)
                         dump(data, f)
 
                     file = File(f"{self.bot.cwd}/Workspace/cdr_directory.pkl")
-                    await ctx.send(f"This file contains pickled data using Python. "
-                                   f"Use the command `{self.bot.command_prefix}setup` and attach the file to load it.",
-                                   file=file)
+                    await ctx.author.send(f"This file contains pickled data using Python.\n"
+                                          f"Use the command `{self.bot.command_prefix}setup` "
+                                          f"and attach the file to load it.",
+                                          file=file)
 
-                    remove(f"{self.bot.cwd}/Workspace/cdr_directory.pkl")
+                    await ctx.send("I sent you a Direct Message containing a data file.")
+
+                    remove(f"{self.bot.cwd}/Workspace/cdr_directory_{ctx.guild.id}.pkl")
 
                     print(f"|| Sent file data from directory to server \"{ctx.guild.name}\".")
                     return
@@ -1070,7 +1120,6 @@ class Commands(Cog):
     async def preview_directory(self, ctx):
         if ctx.guild and ctx.guild.id in self.bot.univ.Directories and \
                 ctx.channel.id == self.bot.univ.Directories[ctx.guild.id]["channelID"]:
-            await ctx.message.delete()
             await ctx.send("You cannot use that command here.", delete_after=5)
             return
 
@@ -1139,15 +1188,13 @@ class Commands(Cog):
             return
 
         if ctx.guild.id in self.bot.univ.LoadingUpdate:
-            await ctx.message.delete()
             await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
                            delete_after=5)
             return
         else:
-            with Loading(self.bot, ctx.guild.id):
+            with loading(self.bot, ctx.guild.id):
 
                 if ctx.guild.id in self.bot.univ.Directories:
-                    await ctx.message.delete()
                     if self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]['channelID']) is None:
                         await ctx.send("You need to set up your directory again.")
                         self.bot.univ.Directories.pop(ctx.guild.id)

@@ -2,20 +2,16 @@
 
 # Lib
 from contextlib import suppress
-from os import popen, remove
+from os import popen
 from os.path import exists, join
 from pickle import dump
 from copy import deepcopy
 # Site
-# from discord.abc import Messageable
-# from discord.channel import TextChannel
-from discord import AppInfo, Permissions
 from discord.embeds import Embed
 from discord.ext.commands.cog import Cog
 from discord.ext.commands.context import Context
-from discord.ext.commands.core import command, group, is_owner
+from discord.ext.commands.core import command, group, is_owner, bot_has_permissions
 from discord.ext.commands.errors import (
-    # BadArgument,
     ExtensionAlreadyLoaded,
     ExtensionFailed,
     ExtensionNotFound,
@@ -353,15 +349,15 @@ class Admin(Cog):
                         self.bot.auto_pull = False
 
                     em.description = f"{ctx.author.mention} updated \"{option}\" to \"{new_value}\".\n`Original value: {original}`"
-                    em.color = 0x00FF00
+                    em.colour = 0x00FF00
 
                 elif new_value:
                     em.description = f"An improper value was passed.\n`Valid responses for {option}: [True], [False]`"
-                    em.color = 0xFF0000
+                    em.colour = 0xFF0000
 
                 elif not new_value:
                     em.description = f"The current value for {option} is:\n`{self.bot.auto_pull}`"
-                    em.color = 0x0000FF
+                    em.colour = 0x0000FF
 
             elif option == "debug_mode":
                 if new_value in ["True", "False"]:
@@ -372,31 +368,15 @@ class Admin(Cog):
                         self.bot.debug_mode = False
 
                     em.description = f"{ctx.author.mention} updated \"{option}\" to \"{new_value}\".\n`Original value: {original}`"
-                    em.color = 0x00FF00
+                    em.colour = 0x00FF00
 
                 elif new_value:
                     em.description = f"An improper value was passed.\n`Valid responses for {option}: [True], [False]`"
-                    em.color = 0xFF0000
+                    em.colour = 0xFF0000
 
                 elif not new_value:
                     em.description = f"The current value for {option} is:\n`{self.bot.debug_mode}`"
-                    em.color = 0x0000FF
-
-            elif option == "tz":
-                if new_value in ["EST", "CST", "UTC"]:
-                    original = deepcopy(self.bot.tz)
-                    self.bot.tz = new_value
-
-                    em.description = f"{ctx.author.mention} updated \"{option}\" to \"{new_value}\".\n`Original value: {original}`"
-                    em.color = 0x00FF00
-
-                elif new_value:
-                    em.description = f"An improper value was passed.\n`Valid responses for {option}: [EST], [CST], [UTC]`"
-                    em.color = 0xFF0000
-
-                elif not new_value:
-                    em.description = f"The current value for {option} is:\n`{self.bot.tz}`"
-                    em.color = 0x0000FF
+                    em.colour = 0x0000FF
 
             elif option == "prefix":
                 if new_value:
@@ -404,15 +384,15 @@ class Admin(Cog):
                     self.bot.command_prefix = new_value
 
                     em.description = f"{ctx.author.mention} updated \"{option}\" to \"{new_value}\".\n`Original value: {original}`"
-                    em.color = 0x00FF00
+                    em.colour = 0x00FF00
 
                 if not new_value:
                     em.description = f"The current value for {option} is:\n`{self.bot.command_prefix}`"
-                    em.color = 0x0000FF
+                    em.colour = 0x0000FF
 
             elif option == "changelog":
                 file = None
-                em.color = 0x00FF00
+                em.colour = 0x00FF00
                 if ctx.message.attachments:
                     for i in ctx.message.attachments:
                         if i.filename == f"changelog.txt":
@@ -422,36 +402,37 @@ class Admin(Cog):
                     if not file:
                         em.description = f"Enter `{self.bot.command_prefix}help updates` to view the changelog.\n" \
                                          f"**Attach a file named \"changelog.txt\".**"
-                        em.color = 0xFF0000
+                        em.colour = 0xFF0000
 
                     elif file:
                         await file.save(f"{self.bot.cwd}/changelog.txt")
                         em.description = f"Changelog file set."
-                        em.color = 0x00FF00
+                        em.colour = 0x00FF00
 
                 else:
                     em.description = f"Enter `{self.bot.command_prefix}help updates` to view the changelog.\n" \
                                      f"Attach a file named \"changelog.txt\"."
-                    em.color = 0x0000FF
+                    em.colour = 0x0000FF
 
             else:
                 em.description = f"Bot configuration option not found."
-                em.color = 0x000000
+                em.colour = 0x000000
 
         if not option:
             em.description = f"The options and values are listed below:\n" \
-                             f"```debug_mode: {self.bot.debug_mode}\n" \
+                             f"```\n" \
+                             f"debug_mode: {self.bot.debug_mode}\n" \
                              f"auto_pull: {self.bot.auto_pull}\n" \
-                             f"tz: {self.bot.tz}\n" \
                              f"prefix: {self.bot.command_prefix}\n" \
-                             f"changelog: Not shown here```"
-            em.color = 0x0000FF
+                             f"changelog: Not shown here\n" \
+                             f"```"
+            em.colour = 0x0000FF
 
         await ctx.send(embed=em)
-            
-    @command(name="logout")
+
     @is_owner()
-    async def blogout(self, ctx: Context):
+    @command(name="logout")
+    async def b_logout(self, ctx: Context):
         await ctx.send("Logging out...")
         if not exists(join(self.bot.cwd, "Serialized", "data.pkl")):
             await ctx.send("[Unable to save] data.pkl not found. Replace file before shutting down.")

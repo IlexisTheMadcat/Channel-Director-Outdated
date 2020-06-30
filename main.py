@@ -28,41 +28,41 @@ with open(join(getcwd(), "Serialized", "bot_config.pkl"), "rb") as f:
         print(f'[Using defaults] Unpickling error: {e}{" "*30}')
         debug_mode = False
         auto_pull = True
-        tz = "UTC"
         prefix = "cdr:"
     else:
         try:
             debug_mode = config_data["debug_mode"]
             auto_pull = config_data["auto_pull"]
-            tz = config_data["tz"]
             prefix = config_data["prefix"]
             print(f"Loaded bot_config.pkl{' '*20}")
         except KeyError:
-            print(f'[Using defaults] bot_config.pkl file improperly formatted.{" "*35}')  # print excess spaces to fully overwrite the '\r' above
-            debug_mode = False  # Print exceptions to stdout. Some errors will not be printed for some reason, such as NameError outside of commands.
-            auto_pull = True  # Auto pulls github updates every minute and reloads all loaded cogs.
-            tz = "UTC"  # Triggers python to get real UTC time for Rems's status.
-            prefix = "cdr:"
+            print(f'[Using defaults] bot_config.pkl file improperly formatted.{" "*35}')
+            # print excess spaces to fully overwrite the '\r' above
+
+            debug_mode = False
+            # Print exceptions to stdout.
+            # Some errors will not be printed for some reason, such as NameError outside of commands.
+
+            auto_pull = True
+            # Auto pulls github updates every minute and reloads all loaded cogs.
+
+            prefix = "cdr:"  # Bot Prefix
 
 print("#-------------------------------#\n")
-loading_choices = [  # because why not # TODO: Change loading_choices to suit Rem rather than Ram
-    "Loading Random Access Memory...",
-    '"It appears nothing here will fit except women\'s clothes."',
-    "Booting up the creative but stubbern mind...",
-    "Waking up the older sister...",
-    "Charging RAM...",
-    '"I was only waiting to help Roswaal-sama put on fresh clothes."',
-    '"By the way, do you have plans after this?"',
-    '"I see you really are studying, sir."',
-    '"No, thank you, sir."',
-    '"What can you do by learning anything now?!"',
-    '"I\'m not interested."',
-    "Requesting the one they call Ram..."
+loading_choices = [  # because why not
+    "Loading the 'non-existent' one...",
+    '"Subaru!"',
+    "Booting up the faithful mind...",
+    "Waking up the younger sister...",
+    "Charging REM...",
+    '"I shall be watching over you from behind, always."',
+    '"I believe I was born for this very moment.',
+    '"My sister is not very good at cooking."',
+    '"I am surprised."',
+    '"Oh, he has awakened, Sister."',
+    '"I shall inform my sister that Subaru-kun will be useless for today."',
+    "Requesting the one they call Rem... Who is she by the way?"
 ]
-
-print("#-------------------------------#")
-print(f"{choice(loading_choices)}")
-print(f"#-------------------------------#\n")
 
 INIT_EXTENSIONS = [
     "admin",
@@ -84,8 +84,7 @@ bot = Bot(
     # Configurable via :>bot
     command_prefix=prefix,
     debug_mode=debug_mode,
-    auto_pull=auto_pull,
-    tz=tz
+    auto_pull=auto_pull
 )
 
 bot.remove_command("help")
@@ -122,8 +121,8 @@ async def on_ready():
         print(f"| Loading initial cog {cog}")
         try:
             bot.load_extension(f"cogs.{cog}")
-        except Exception as e:
-            print(f"| Failed to load extension {cog}\n|   {type(e).__name__}: {e}", end="\n")
+        except Exception as err:
+            print(f"| Failed to load extension {cog}\n|   {type(err).__name__}: {err}", end="\n")
 
     print(f"#-------------------------------#\n"
           f"| Successfully logged in.\n"
@@ -134,7 +133,9 @@ async def on_ready():
           f"| Guilds:    {len(bot.guilds)}\n"
           f"| Users:     {len(list(bot.get_all_members()))}\n"
           f"| OAuth URL: {oauth_url(app_info.id, permissions)}\n"
-          f"# ------------------------------#")
+          f"#------------------------------#\n"
+          f"{choice(loading_choices)}\n"
+          f"#-------------------------------#\n")
 
 
 if __name__ == "__main__":

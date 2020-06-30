@@ -1,11 +1,12 @@
 
 # Lib
-
-# Site
 from asyncio import sleep
+from asyncio.exceptions import TimeoutError
 from contextlib import suppress
 from copy import deepcopy
 
+# Site
+from discord import Reaction, User
 from discord.channel import CategoryChannel
 from discord.ext.commands.context import Context
 from discord.ext.commands.cog import Cog
@@ -21,8 +22,7 @@ from discord.errors import Forbidden
 
 # Local
 from utils.classes import Bot
-from utils.directory_mgmt import LoadingUpdate_contextmanager as LuCm
-
+from utils.directory_mgmt import loadingupdate as lucm, recurse_index, usinggui
 
 class Events(Cog):
     def __init__(self, bot: Bot):
@@ -31,7 +31,7 @@ class Events(Cog):
     @Cog.listener()
     async def on_guild_channel_delete(self, channel):
         if channel.guild.id not in self.bot.univ.LoadingUpdate and channel.guild.id in self.bot.univ.Directories:
-            with LuCm(self.bot, channel.guild.id):
+            with lucm(self.bot, channel.guild.id):
                 await sleep(5)
                 catch_id = deepcopy(self.bot.univ.Directories[channel.guild.id]["categoryID"])
                 await self.bot.update_directory(channel,
@@ -80,6 +80,917 @@ class Events(Cog):
                     await msg.add_reaction("👋")
             except Forbidden:
                 pass
+
+    @Cog.listener()
+    async def on_reaction_add(self, reaction: Reaction, user: User):
+        if reaction.message.guild and reaction.message.guild.id in self.bot.univ.Directories:
+            if reaction.message.id == self.bot.univ.Directories[reaction.message.guild.id]["messageID"]:
+                if user == self.bot.user:
+                    return
+                else:
+                    await reaction.remove(user)
+
+                if reaction.message.guild.id in self.bot.univ.using_gui:
+                    if self.bot.univ.using_gui[reaction.message.guild.id] == user.id:
+                        await reaction.message.channel.send(
+                            f"**{user}**, please answer the prompt first!",
+                            delete_after=5
+                        )
+                        return
+                    else:
+                        user_inuse = self.bot.get_user(self.bot.univ.using_gui[reaction.message.guild.id])
+                        await reaction.message.channel.send(
+                            f"{user.mention}, **{user_inuse}** is currently using the GUI.",
+                            delete_after=5
+                        )
+                        return
+
+                elif str(reaction.emoji) in ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"]:
+                    with usinggui(self.bot, reaction.message.guild.id, user.id):
+                        if str(reaction.emoji) == "1️⃣":
+                            confirmation = await reaction.message.channel.send(
+                                f"**{user}**\n"
+                                f"[60 seconds] Enter the path where you would like to create this channel:\n"
+                                f"Path: \\_\\_\\_\\_\n"
+                                f"Name: \\_\\_\\_\\_\n"
+                                f"Type \"+Cancel\" to cancel.")
+
+                            def check(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    path = await self.bot.wait_for("message", timeout=60, check=check)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+
+                                else:
+                                    if path.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    try:
+                                        get_item = recurse_index(
+                                            self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                            path.content.split("//"))
+
+                                        if isinstance(get_item, int):
+                                            raise KeyError(str(path[-1]))
+
+                                    except KeyError as e:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Enter the path where you would like to create this channel:\n"
+                                                    f"Path: \\_\\_\\_\\_\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: That directory doesn't exist. Level `{e}` is not found.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+                                    else:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the name of your new channel:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        break
+
+                            def check(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    name = await self.bot.wait_for("message", timeout=60, check=check)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                else:
+                                    if name.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    get_item = recurse_index(
+                                        self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                        path.content.split("//"))
+
+                                    if isinstance(get_item, dict) and name.content in get_item:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the name of your new channel:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: A category/channel with that name already exists in that directory.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+
+                                    if len(name.content) > 50:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the name of your new channel:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: Your name cannot exceed 50 characters in length.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+
+                                    else:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"Done! One moment...\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: __{name.content}__\n"
+                                        )
+                                        await sleep(2)
+                                        await confirmation.edit(content="Adding new channel...")
+                                        ctx = await self.bot.get_context(reaction.message)
+                                        await self.bot.get_command("create_channel").callback(self, ctx, path.content, name.content)
+                                        await confirmation.delete()
+                                        break
+
+                        elif str(reaction.emoji) == "2️⃣":
+                            confirmation = await reaction.message.channel.send(
+                                f"**{user}**\n"
+                                f"[60 seconds] Enter the path where you would like to create this category:\n"
+                                f"Path: \\_\\_\\_\\_\n"
+                                f"Name: \\_\\_\\_\\_\n"
+                                f"Type \"+Cancel\" to cancel.")
+
+                            def check(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    path = await self.bot.wait_for("message", timeout=60, check=check)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                else:
+                                    if path.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    try:
+                                        get_item = recurse_index(
+                                            self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                            path.content.split("//"))
+
+                                        if isinstance(get_item, int):
+                                            raise KeyError(str(path[-1]))
+
+                                    except KeyError as e:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Enter the path where you would like to create this category:\n "
+                                                    f"Path: \\_\\_\\_\\_\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: That directory doesn't exist. Level `{e}` is not found.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+                                    else:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the name of your new category:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        break
+
+                            def check(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    name = await self.bot.wait_for("message", timeout=60, check=check)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.")
+                                else:
+                                    if name.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    get_item = recurse_index(
+                                        self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                        path.content.split("//"))
+
+                                    if name.content in get_item:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the name of your new category:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: A category/channel with that name already exists in that directory.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+
+                                    if len(name.content) > 50:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the name of your new category:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: Your name cannot exceed 50 characters in length.\n"
+                                                    f"Type \"+Cancel\" to cancel."
+                                        )
+                                        continue
+
+                                    else:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"Done! One moment...\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: __{name.content}__\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+
+                                        await sleep(2)
+                                        await confirmation.edit(content="Adding new category...")
+                                        ctx = await self.bot.get_context(reaction.message)
+                                        await self.bot.get_command("create_category").callback(self, ctx, path.content, name.content)
+                                        await confirmation.delete()
+                                        break
+
+                        elif str(reaction.emoji) == "3️⃣":
+                            confirmation = await reaction.message.channel.send(
+                                f"**{user}**\n"
+                                f"[60 seconds] Enter the path where you would like to delete a category:\n"
+                                f"Path: \\_\\_\\_\\_\n"
+                                f"Name: \\_\\_\\_\\_\n"
+                                f"Type \"+Cancel\" to cancel.")
+
+                            def check(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    path = await self.bot.wait_for("message", timeout=60, check=check)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                else:
+                                    if path.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    try:
+                                        get_item = recurse_index(
+                                            self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                            path.content.split("//"))
+
+                                        if isinstance(get_item, int):
+                                            raise KeyError(str(path[-1]))
+
+                                    except KeyError as e:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Enter the path where you would like to delete a category:\n "
+                                                    f"Path: \\_\\_\\_\\_\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: That directory doesn't exist. Level `{e}` is not found.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+                                    else:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the name of the target category:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        break
+
+                            def check(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    name = await self.bot.wait_for("message", timeout=60, check=check)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                else:
+                                    if name.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    get_item = recurse_index(
+                                        self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                        path.content.split("//"))
+
+                                    if isinstance(get_item, dict) and name.content not in get_item:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the name of the target category:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: A category with that name doesn't exist in that directory.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+
+                                    elif isinstance(get_item, tuple):
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the name of the target category:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: That's a channel, not a category. Navigate to the channel and delete it manually.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+
+                                    if len(name.content) > 50:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the name of the target category:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: Your name cannot exceed 50 characters in length.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+
+                                    else:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"Done! One moment...\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: __{name.content}__\n"
+                                        )
+                                        await sleep(2)
+                                        await confirmation.edit(content="Deleting category...")
+                                        ctx = await self.bot.get_context(reaction.message)
+                                        await self.bot.get_command("delete_category").callback(self, ctx, path.content, name.content)
+                                        await confirmation.delete()
+                                        break
+
+                        elif str(reaction.emoji) == "4️⃣":
+                            confirmation = await reaction.message.channel.send(
+                                f"**{user}**\n"
+                                f"[60 seconds] Enter the path where you would like to rename a category or channel:\n"
+                                f"Path: \\_\\_\\_\\_\n"
+                                f"Name: \\_\\_\\_\\_\n"
+                                f"Rename: \\_\\_\\_\\_\n"
+                                f"Type \"+Cancel\" to cancel.")
+
+                            def check(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    path = await self.bot.wait_for("message", timeout=60, check=check)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                else:
+                                    if path.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    try:
+                                        get_item = recurse_index(
+                                            self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                            path.content.split("//"))
+
+                                        if isinstance(get_item, int):
+                                            raise KeyError(str(path[-1]))
+
+                                    except KeyError as e:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Enter the path where you would like to rename a category or channel:\n "
+                                                    f"Path: \\_\\_\\_\\_\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f"Rename: \\_\\_\\_\\_\n"
+                                                    f":warning: That directory doesn't exist. Level `{e}` is not found.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+                                    else:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the the target's name:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f"Rename: \\_\\_\\_\\_\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        break
+
+                            def check(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    name = await self.bot.wait_for("message", timeout=60, check=check)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                else:
+                                    if name.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    get_item = recurse_index(
+                                        self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                        path.content.split("//"))
+
+                                    if name.content not in get_item:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the the target's name:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f"Rename: \\_\\_\\_\\_\n"
+                                                    f":warning: A category/channel with that name doesn't exist in that directory.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+
+                                    if len(name.content) > 50:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the the target's name:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f"Rename: \\_\\_\\_\\_\n"
+                                                    f":warning: Your name cannot exceed 50 characters in length.\n"
+                                                    f"Type \"+Cancel\" to cancel."
+                                        )
+                                        continue
+
+                                    else:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the the target's **new** name:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: __{name.content}__\n"
+                                                    f"Rename: \\_\\_\\_\\_\\_\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        break
+
+                            def check_rename(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    rename = await self.bot.wait_for("message", timeout=60, check=check_rename)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                else:
+                                    if rename.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    get_item = recurse_index(
+                                        self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                        path.content.split("//"))
+
+                                    if rename.content in get_item:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the the target's **new** name:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: __{name.content}__\n"
+                                                    f"Rename: \\_\\_\\_\\_\n"
+                                                    f":warning: A category/channel with that name already exists in that directory.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+
+                                    if len(rename.content) > 50:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the the target's **new** name:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: __{name.content}__\n"
+                                                    f"Rename: \\_\\_\\_\\_\n"
+                                                    f":warning: Your new name cannot exceed 50 characters in length.\n"
+                                                    f"Type \"+Cancel\" to cancel."
+                                        )
+                                        continue
+
+                                    else:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"Done! One moment...\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: __{name.content}__\n"
+                                                    f"Rename: __{rename.content}__\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+
+                                        await sleep(2)
+                                        await confirmation.edit(content="Renaming category/channel...")
+                                        ctx = await self.bot.get_context(reaction.message)
+                                        await self.bot.get_command("rename_channel").callback(self, ctx, path.content, name.content, rename.content)
+                                        await confirmation.delete()
+                                        break
+
+                        elif str(reaction.emoji) == "5️⃣":
+                            confirmation = await reaction.message.channel.send(
+                                f"**{user}**\n"
+                                f"[60 seconds] Enter the path where you would like to move a category or channel:\n"
+                                f"Path: \\_\\_\\_\\_\n"
+                                f"Name: \\_\\_\\_\\_\n"
+                                f"New Path: \\_\\_\\_\\_\n"
+                                f"Type \"+Cancel\" to cancel.")
+
+                            def check(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    path = await self.bot.wait_for("message", timeout=60, check=check)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                else:
+                                    if path.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    try:
+                                        get_item = recurse_index(
+                                            self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                            path.content.split("//"))
+
+                                        if isinstance(get_item, int):
+                                            raise KeyError(str(path[-1]))
+
+                                    except KeyError as e:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Enter the path where you would like to move a category or channel:\n "
+                                                    f"Path: \\_\\_\\_\\_\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f"New Path: \\_\\_\\_\\_\n"
+                                                    f":warning: That directory doesn't exist. Level `{e}` is not found.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+                                    else:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the the target's name:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f"New Path: \\_\\_\\_\\_\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        break
+
+                            def check(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    name = await self.bot.wait_for("message", timeout=60, check=check)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                else:
+                                    if name.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    get_item = recurse_index(
+                                        self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                        path.content.split("//"))
+
+                                    if name.content not in get_item:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the the target's name:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f"New Path: \\_\\_\\_\\_\n"
+                                                    f":warning: A category/channel with that name doesn't exist in that directory.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+
+                                    if len(name.content) > 50:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the the target's name:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f"New Path: \\_\\_\\_\\_\n"
+                                                    f":warning: Your name cannot exceed 50 characters in length.\n"
+                                                    f"Type \"+Cancel\" to cancel."
+                                        )
+                                        continue
+
+                                    else:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the the target's **new** path:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: __{name.content}__\n"
+                                                    f"New Path: \\_\\_\\_\\_\\_\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        break
+
+                            def check(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    new_path = await self.bot.wait_for("message", timeout=60, check=check)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                else:
+                                    if new_path.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    try:
+                                        get_new_item = recurse_index(
+                                            self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                            new_path.content.split("//"))
+
+                                        if isinstance(get_new_item, int):
+                                            raise KeyError(str(path[-1]))
+
+                                    except KeyError as e:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the the target's **new** path:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: __{name.content}__\n"
+                                                    f"New Path: \\_\\_\\_\\_\n"
+                                                    f":warning: Your destination path doesn't exist. Level `{e}` is not found.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+                                    else:
+                                        if name.content in get_new_item:
+                                            await confirmation.edit(
+                                                content=f"**{user}**\n"
+                                                        f"[60 seconds] Now, enter the the target's **new** path:\n"
+                                                        f"Path: __{path.content}__\n"
+                                                        f"Name: __{name.content}__\n"
+                                                        f"New Path: \\_\\_\\_\\_\n"
+                                                        f":warning: A category/channel already has the same name as your target. Rename either channel and try again.\n"
+                                                        f"Type \"+Cancel\" to cancel.")
+                                            continue
+                                        else:
+                                            await confirmation.edit(
+                                                content=f"**{user}**\n"
+                                                        f"Done! One moment...\n"
+                                                        f"Path: __{path.content}__\n"
+                                                        f"Name: __{name.content}__\n"
+                                                        f"New Path: __{new_path.content}__\n"
+                                                        f"Type \"+Cancel\" to cancel.")
+
+                                            await sleep(2)
+                                            await confirmation.edit(content="Renaming category/channel...")
+                                            ctx = await self.bot.get_context(reaction.message)
+                                            await self.bot.get_command("move_channel").callback(self, ctx, path.content, name.content, new_path.content)
+                                            await confirmation.delete()
+                                            break
+
+                        elif str(reaction.emoji) == "6️⃣":
+                            confirmation = await reaction.message.channel.send(
+                                f"**{user}**\n"
+                                f"[60 seconds] Mention the channel you would like to import:\n"
+                                f"Channel: \\_\\_\\_\\_\n"
+                                f"Path: \\_\\_\\_\\_\n"
+                                f"Name: \\_\\_\\_\\_\n"
+                                f"Type \"+Cancel\" to cancel.")
+
+                            def check(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    channel = await self.bot.wait_for("message", timeout=60, check=check)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                else:
+                                    if channel.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    channel_id = int(channel.content.replace("<#", "").replace(">", ""))
+                                    channel_found = self.bot.get_channel(channel_id)
+
+                                    if not channel_found:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Mention the channel you would like to import:\n "
+                                                    f"Channel: \\_\\_\\_\\_\n"
+                                                    f"Path: \\_\\_\\_\\_\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: That channel doesn't exist.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+
+                                    tree = deepcopy(self.bot.univ.Directories[reaction.message.guild.id]["tree"])
+                                    while True:
+                                        ids = self.bot.get_all_ids(tree, c_ids=list())
+                                        if isinstance(ids, dict):
+                                            tree = ids
+                                            continue
+                                        elif isinstance(ids, list):
+                                            break
+
+                                    if isinstance(ids, list):
+                                        if channel_found.id in ids:
+                                            await confirmation.edit(
+                                                content=f"**{user}**\n"
+                                                        f"[60 seconds] Now, enter the name to import this channel as:\n"
+                                                        f"Channal: \\_\\_\\_\\_\n"
+                                                        f"Path: \\_\\_\\_\\_\n"
+                                                        f"Name: \\_\\_\\_\\_\n"
+                                                        f":warning: That channel is already in the directory. "
+                                                        f"It was either created with the new system, or already imported.\n"
+                                                        f"Type \"+Cancel\" to cancel.")
+                                            continue
+
+                                    await confirmation.edit(
+                                        content=f"**{user}**\n"
+                                                f"[60 seconds] Now, enter the path you would like to import this channel into:\n"
+                                                f"Channel: __{channel_found.mention}__\n"
+                                                f"Path: \\_\\_\\_\\_\n"
+                                                f"Name: \\_\\_\\_\\_\n"
+                                                f"Type \"+Cancel\" to cancel.")
+                                    break
+
+                            def check(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    path = await self.bot.wait_for("message", timeout=60, check=check)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                else:
+                                    if path.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    try:
+                                        get_item = recurse_index(
+                                            self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                            path.content.split("//"))
+                                    except KeyError as e:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the path you would like to import this channel into:\n"
+                                                    f"Channel: __{channel_found.mention}__\n"
+                                                    f"Path: \\_\\_\\_\\_\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: That directory doesn't exist. Level `{e}` not found.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+
+                                    else:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the name to import this channel as:\n"
+                                                    f"Channal: __{channel_found.mention}__\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        break
+
+                            def check(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    name = await self.bot.wait_for("message", timeout=60, check=check)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                else:
+                                    if name.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    get_item = recurse_index(
+                                        self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                        path.content.split("//"))
+
+                                    if name.content in get_item:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the name to import this channel as:\n"
+                                                    f"Channal: __{channel_found.mention}__\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: A category/channel already exists with that name.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+
+                                    else:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"Done! One moment...\n"
+                                                    f"Channel: __{channel_found.mention}__\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: __{name.content}__\n")
+
+                                        await sleep(2)
+                                        await confirmation.edit(content="Importing channel...")
+                                        ctx = await self.bot.get_context(reaction.message)
+                                        await self.bot.get_command("import_channel").callback(self, ctx, channel_found, path.content, name.content)
+                                        await confirmation.delete()
+                                        break
+
+                        elif str(reaction.emoji) == "7️⃣":
+                            confirmation = await reaction.message.channel.send(
+                                f"**{user}**\n"
+                                f"[60 seconds] Enter the path where channel you want to hide is located:\n"
+                                f"Path: \\_\\_\\_\\_\n"
+                                f"Name: \\_\\_\\_\\_\n"
+                                f"Type \"+Cancel\" to cancel.")
+
+                            def check(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    path = await self.bot.wait_for("message", timeout=60, check=check)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+
+                                else:
+                                    if path.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    try:
+                                        get_item = recurse_index(
+                                            self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                            path.content.split("//"))
+
+                                        if isinstance(get_item, int):
+                                            raise KeyError(str(path[-1]))
+
+                                    except KeyError as e:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Enter the path where channel you want to hide is located:\n"
+                                                    f"Path: \\_\\_\\_\\_\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: That directory doesn't exist. Level `{e}` is not found.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+                                    else:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the name of the target channel:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        break
+
+                            def check(msg):
+                                return msg.author == user and msg.channel == reaction.message.channel
+
+                            while True:
+                                try:
+                                    name = await self.bot.wait_for("message", timeout=60, check=check)
+                                except TimeoutError:
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                else:
+                                    if name.content == "+Cancel":
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+
+                                    get_item = recurse_index(
+                                        self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                        path.content.split("//"))
+
+                                    if name.content not in get_item:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the name of the target channel:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: A category/channel with that name already exists.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+
+                                    if len(name.content) > 50:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the name of the target channel:\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: Your name cannot exceed 50 characters in length.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
+
+                                    else:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"Done! One moment...\n"
+                                                    f"Path: __{path.content}__\n"
+                                                    f"Name: __{name.content}__\n"
+                                        )
+                                        await sleep(2)
+                                        await confirmation.edit(content="Hiding channel...")
+                                        ctx = await self.bot.get_context(reaction.message)
+                                        await self.bot.get_command("hide_channel").callback(self, ctx, path.content, name.content)
+                                        await confirmation.delete()
+                                        break
+
+
+    @Cog.listener()
+    async def on_raw_reaction_add(self, payload):
+        channel = self.bot.get_channel(payload.channel_id)
+        message = await channel.fetch_message(payload.message_id)
+        user = self.bot.get_user(payload.user_id)
+
+        ctx = await self.bot.get_context(message)
+
+        if user == self.bot.user:
+            return
+
+        if ctx.guild and ctx.guild.id in self.bot.univ.Directories:
+            if ctx.message.id == self.bot.univ.Directories[ctx.guild.id]["messageID"]:
+                if str(payload.emoji) == "🔄" and payload.user_id != self.bot.user.id:
+
+                    if ctx.guild.id in self.bot.univ.using_gui:
+                        if self.bot.univ.using_gui[ctx.guild.id] == user.id:
+                            await ctx.message.channel.send(
+                                f"**{user}**, please answer the prompt first!",
+                                delete_after=5
+                            )
+                            return
+                        else:
+                            user_inuse = self.bot.get_user(self.bot.univ.using_gui[ctx.guild.id])
+                            await ctx.channel.send(
+                                f"{user.mention}, **{user_inuse}** is currently using the GUI.",
+                                delete_after=5
+                            )
+                            return
+
+                    else:
+                        await self.bot.get_command("update").callback(self, ctx)
 
     # Errors
     @Cog.listener()
@@ -211,8 +1122,8 @@ class Events(Cog):
                     await ctx.message.add_reaction("❌")
 
                 await msg.author.send(
-                    f"That command is on a {error.cooldown.per} second cooldown.\n"
-                    f"Retry in {error.retry_after} seconds."
+                    f"That command is on a {round(error.cooldown.per)} second cooldown.\n"
+                    f"Retry in {round(error.retry_after)} seconds."
                 )
 
             else:
