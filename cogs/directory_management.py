@@ -29,6 +29,7 @@ required_permissions_total = {
 }
 
 required_permissions = {
+    "read_messages": True,
     "manage_messages": True,
     "send_messages": True
 }
