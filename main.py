@@ -34,7 +34,6 @@ with open(join(getcwd(), "Serialized", "bot_config.pkl"), "rb") as f:
             debug_mode = config_data["debug_mode"]
             auto_pull = config_data["auto_pull"]
             prefix = config_data["prefix"]
-            button_ids = config_data["button_ids"]
             print(f"Loaded bot_config.pkl{' '*20}")
         except KeyError:
             print(f'[Using defaults] bot_config.pkl file improperly formatted.{" "*35}')
@@ -48,15 +47,6 @@ with open(join(getcwd(), "Serialized", "bot_config.pkl"), "rb") as f:
             # Auto pulls github updates every minute and reloads all loaded cogs.
 
             prefix = "cdr:"  # Bot Prefix
-
-            button_ids = {"create_ch": None,
-                          "create_cat": None,
-                          "delete_cat": None,
-                          "rename": None,
-                          "move": None,
-                          "import": None,
-                          "hide": None}
-            # Custom emoji ids
 
 print("#-------------------------------#\n")
 loading_choices = [  # because why not
@@ -94,7 +84,7 @@ bot = Bot(
     # Configurable via :>bot
     command_prefix=prefix,
     debug_mode=debug_mode,
-    auto_pull=auto_pull,
+    auto_pull=auto_pull
 )
 
 bot.remove_command("help")
@@ -132,7 +122,7 @@ async def on_ready():
         try:
             bot.load_extension(f"cogs.{cog}")
         except Exception as err:
-            print(f"| Failed to load extension {cog}\n|   {type(e).__name__}: {err}", end="\n")
+            print(f"| Failed to load extension {cog}\n|   {type(err).__name__}: {err}", end="\n")
 
     print(f"#-------------------------------#\n"
           f"| Successfully logged in.\n"
