@@ -431,52 +431,6 @@ class Admin(Cog):
         await ctx.send(embed=em)
 
     @is_owner()
-    @command()
-    @bot_has_permissions(manage_emoji=True)
-    async def recreate_buttons(self, ctx, guild: int = 0):
-        if not guild:
-            guild = ctx.guild
-        else:
-            guild = await self.bot.get_guild(guild)
-            if guild is None:
-                await ctx.send("I am not in that guild or that guild doesn't exist.")
-                return
-
-        msg = await ctx.send("Recreating buttons for directory control...")
-
-        with open(f"{self.bot.cwd}/Directory Buttons/create_ch.png") as button:
-            button = await guild.create_custom_emoji(name="rem_create_ch.png", image=button)
-            self.bot.buttons["create_ch"] = button.id
-
-        with open(f"{self.bot.cwd}/Directory Buttons/create_cat.png") as button:
-            button = await guild.create_custom_emoji(name="rem_create_cat.png", image=button)
-            self.bot.buttons["create_cat"] = button.id
-
-        with open(f"{self.bot.cwd}/Directory Buttons/delete_cat.png") as button:
-            button = await guild.create_custom_emoji(name="rem_delete_cat.png", image=button)
-            self.bot.buttons["delete_cat"] = button.id
-
-        with open(f"{self.bot.cwd}/Directory Buttons/rename.png") as button:
-            button = await guild.create_custom_emoji(name="rem_rename.png", image=button)
-            self.bot.buttons["rename"] = button.id
-
-        with open(f"{self.bot.cwd}/Directory Buttons/move.png") as button:
-            button = await guild.create_custom_emoji(name="rem_move.png", image=button)
-            self.bot.buttons["move"] = button.id
-
-        with open(f"{self.bot.cwd}/Directory Buttons/import.png") as button:
-            button = await guild.create_custom_emoji(name="rem_import.png", image=button)
-            self.bot.buttons["import"] = button.id
-
-        with open(f"{self.bot.cwd}/Directory Buttons/hide.png") as button:
-            button = await guild.create_custom_emoji(name="rem_hide.png", image=button)
-            self.bot.buttons["hide"] = button.id
-
-        await msg.edit(content="Recreated buttons. Users will have to press the reload button in their directories.")
-
-
-
-    @is_owner()
     @command(name="logout")
     async def b_logout(self, ctx: Context):
         await ctx.send("Logging out...")
