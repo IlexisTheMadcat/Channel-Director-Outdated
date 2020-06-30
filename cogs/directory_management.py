@@ -230,23 +230,10 @@ class Commands(Cog):
                                     member_self = await ctx.guild.fetch_member(self.bot.user.id)
                                     await directory.set_permissions(member_self, send_messages=True)
 
-                                    dmessage = await directory.send(
-                                        "This channel will have a directory under it when "
-                                        "you create a channel using the special command that I provide to you.\n"
-                                        "Also, make sure I have access to all channels added.\n"
-                                        "You are free to move this channel, but it's best to leave on top.")
-
-                                    await dmessage.add_reaction("1️⃣")
-                                    await dmessage.add_reaction("2️⃣")
-                                    await dmessage.add_reaction("3️⃣")
-                                    await dmessage.add_reaction("4️⃣")
-                                    await dmessage.add_reaction("5️⃣")
-                                    await dmessage.add_reaction("6️⃣")
-                                    await dmessage.add_reaction("7️⃣")
-                                    await dmessage.add_reaction("🔄")
-
                                     await msg.edit(
                                         content=f"Finished setup. Get to the directory here: {directory.mention}")
+
+                                    dmessage = await directory.send("Finishing setup...")
 
                                     self.bot.univ.Directories.update(
                                         {ctx.guild.id: {"categoryID": cat.id,
@@ -258,6 +245,9 @@ class Commands(Cog):
                                                         }
                                          }
                                     )
+
+                                    await self.bot.update_directory(ctx, note="Finished setup.")
+                                    await msg.edit(content=f"Finished setup. Get to the directory here: {directory.mention}")
 
                                     return
 
@@ -297,24 +287,18 @@ class Commands(Cog):
                                     await directory.set_permissions(member_self, send_messages=True)
                                     await directory.set_permissions(ctx.author, send_messages=True)
 
-                                    dmessage = await directory.send("Adding controls...")
+                                    dmessage = await directory.send("Adding channels...")
 
-                                    await dmessage.add_reaction("1️⃣")
-                                    await dmessage.add_reaction("2️⃣")
-                                    await dmessage.add_reaction("3️⃣")
-                                    await dmessage.add_reaction("4️⃣")
-                                    await dmessage.add_reaction("5️⃣")
-                                    await dmessage.add_reaction("6️⃣")
-                                    await dmessage.add_reaction("7️⃣")
-                                    await dmessage.add_reaction("🔄")
-
-                                    await dmessage.edit(content="Adding channels")
+                                    self.bot.univ.Directories.update(
+                                        {ctx.guild.id: {"categoryID": cat.id,
+                                                        "channelID": directory.id,
+                                                        "messageID": dmessage.id,
+                                                        "tree": {}
+                                                        }
+                                         }
+                                    )
 
                                     try:
-                                        self.bot.univ.Directories.update({ctx.guild.id: {"categoryID": cat.id,
-                                                                                         "channelID": directory.id,
-                                                                                         "messageID": dmessage.id,
-                                                                                         "tree": {}}})
 
                                         tree = await self.bot.convert_to_directory(ctx, tree)
                                         self.bot.univ.Directories[ctx.guild.id]["tree"] = tree
@@ -331,8 +315,7 @@ class Commands(Cog):
                                         return
                                     else:
                                         await self.bot.update_directory(ctx=ctx, note="Finished automated setup.")
-                                        await msg.edit(
-                                            content=f"Finished setup. Get to the directory here: {directory.mention}")
+                                        await msg.edit(content=f"Finished setup. Get to the directory here: {directory.mention}")
 
                                     return
                         else:
@@ -349,22 +332,7 @@ class Commands(Cog):
                             member_self = await ctx.guild.fetch_member(self.bot.user.id)
                             await directory.set_permissions(member_self, send_messages=True)
 
-                            dmessage = await directory.send(
-                                "This channel will have a directory under it when "
-                                "you create a channel using the special command that I provide to you.\n"
-                                "Also, make sure I have access to all channels added.\n"
-                                "You are free to move this channel, but it's best to leave on top.")
-
-                            await dmessage.add_reaction("1️⃣")
-                            await dmessage.add_reaction("2️⃣")
-                            await dmessage.add_reaction("3️⃣")
-                            await dmessage.add_reaction("4️⃣")
-                            await dmessage.add_reaction("5️⃣")
-                            await dmessage.add_reaction("6️⃣")
-                            await dmessage.add_reaction("7️⃣")
-                            await dmessage.add_reaction("🔄")
-
-                            await msg.edit(content=f"Finished setup. Get to the directory here: {directory.mention}")
+                            dmessage = await directory.send("Finishing setup...")
 
                             self.bot.univ.Directories.update(
                                 {ctx.guild.id: {"categoryID": cat.id,
@@ -376,6 +344,9 @@ class Commands(Cog):
                                                 }
                                  }
                             )
+
+                            await self.bot.update_directory(ctx, note="Finished setup.")
+                            await msg.edit(content=f"Finished setup. Get to the directory here: {directory.mention}")
 
                             return
 

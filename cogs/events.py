@@ -85,6 +85,9 @@ class Events(Cog):
     async def on_reaction_add(self, reaction: Reaction, user: User):
         if reaction.message.guild and reaction.message.guild.id in self.bot.univ.Directories:
             if reaction.message.id == self.bot.univ.Directories[reaction.message.guild.id]["messageID"]:
+                if reaction.message.guild.id in self.bot.univ.pause_reaction_listening:
+                    return
+
                 if user == self.bot.user:
                     return
                 else:
@@ -105,8 +108,51 @@ class Events(Cog):
                         )
                         return
 
-                elif str(reaction.emoji) in ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"]:
-                    with usinggui(self.bot, reaction.message.guild.id, user.id):
+                with usinggui(self.bot, reaction.message.guild.id, user.id):
+                    if str(reaction.emoji) == "📝":
+                        await reaction.message.clear_reactions()
+
+                        info = await reaction.message.channel.send(
+                            f"**{user}**, The above buttons are **guided** commands.\n"
+                            f"To cancel, simply wait about 10 seconds."
+                            "```\n"
+                            "1️⃣ = Create Channel\n"
+                            "2️⃣ = Create Category\n"
+                            "3️⃣ = Delete Category\n"
+                            "4️⃣ = Rename Category/Channel\n"
+                            "5️⃣ = Move Category/Channel\n"
+                            "6️⃣ = Import Channel\n"
+                            "7️⃣ = Hide Category/Channel\n"
+                            "```"
+                        )
+                        await reaction.message.add_reaction("1️⃣")
+                        await reaction.message.add_reaction("2️⃣")
+                        await reaction.message.add_reaction("3️⃣")
+                        await reaction.message.add_reaction("4️⃣")
+                        await reaction.message.add_reaction("5️⃣")
+                        await reaction.message.add_reaction("6️⃣")
+                        await reaction.message.add_reaction("7️⃣")
+                    else:
+                        return
+
+                    def check(rreaction, uuser):
+                        return str(rreaction.emoji) in ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"] and rreaction.message == reaction.message and uuser == user
+
+                    self.bot.univ.pause_reaction_listening.append(reaction.message.guild.id)
+                    try:
+                        reaction, user = await self.bot.wait_for("reaction_add", timeout=15, check=check)
+                    except TimeoutError:
+                        self.bot.univ.pause_reaction_listening.remove(reaction.message.guild.id)
+                        await reaction.message.clear_reactions()
+                        await info.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                        await reaction.message.add_reaction("📝")
+                        await reaction.message.add_reaction("🔄")
+
+                    else:
+                        self.bot.univ.pause_reaction_listening.remove(reaction.message.guild.id)
+                        await reaction.message.clear_reactions()
+                        await info.delete()
+
                         if str(reaction.emoji) == "1️⃣":
                             confirmation = await reaction.message.channel.send(
                                 f"**{user}**\n"
@@ -122,10 +168,16 @@ class Events(Cog):
                                 try:
                                     path = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
 
                                 else:
                                     if path.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     try:
@@ -161,9 +213,15 @@ class Events(Cog):
                                 try:
                                     name = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
                                 else:
                                     if name.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     get_item = recurse_index(
@@ -219,9 +277,15 @@ class Events(Cog):
                                 try:
                                     path = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
                                 else:
                                     if path.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     try:
@@ -257,9 +321,15 @@ class Events(Cog):
                                 try:
                                     name = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** timed out.")
                                 else:
                                     if name.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     get_item = recurse_index(
@@ -292,8 +362,7 @@ class Events(Cog):
                                             content=f"**{user}**\n"
                                                     f"Done! One moment...\n"
                                                     f"Path: __{path.content}__\n"
-                                                    f"Name: __{name.content}__\n"
-                                                    f"Type \"+Cancel\" to cancel.")
+                                                    f"Name: __{name.content}__\n")
 
                                         await sleep(2)
                                         await confirmation.edit(content="Adding new category...")
@@ -317,9 +386,15 @@ class Events(Cog):
                                 try:
                                     path = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
                                 else:
                                     if path.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     try:
@@ -355,9 +430,15 @@ class Events(Cog):
                                 try:
                                     name = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
                                 else:
                                     if name.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     get_item = recurse_index(
@@ -424,9 +505,15 @@ class Events(Cog):
                                 try:
                                     path = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
                                 else:
                                     if path.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     try:
@@ -464,9 +551,15 @@ class Events(Cog):
                                 try:
                                     name = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
                                 else:
                                     if name.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     get_item = recurse_index(
@@ -513,9 +606,15 @@ class Events(Cog):
                                 try:
                                     rename = await self.bot.wait_for("message", timeout=60, check=check_rename)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
                                 else:
                                     if rename.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     get_item = recurse_index(
@@ -551,8 +650,7 @@ class Events(Cog):
                                                     f"Done! One moment...\n"
                                                     f"Path: __{path.content}__\n"
                                                     f"Name: __{name.content}__\n"
-                                                    f"Rename: __{rename.content}__\n"
-                                                    f"Type \"+Cancel\" to cancel.")
+                                                    f"Rename: __{rename.content}__\n")
 
                                         await sleep(2)
                                         await confirmation.edit(content="Renaming category/channel...")
@@ -577,9 +675,15 @@ class Events(Cog):
                                 try:
                                     path = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
                                 else:
                                     if path.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     try:
@@ -617,9 +721,15 @@ class Events(Cog):
                                 try:
                                     name = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
                                 else:
                                     if name.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     get_item = recurse_index(
@@ -666,9 +776,15 @@ class Events(Cog):
                                 try:
                                     new_path = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
                                 else:
                                     if new_path.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     try:
@@ -706,8 +822,7 @@ class Events(Cog):
                                                         f"Done! One moment...\n"
                                                         f"Path: __{path.content}__\n"
                                                         f"Name: __{name.content}__\n"
-                                                        f"New Path: __{new_path.content}__\n"
-                                                        f"Type \"+Cancel\" to cancel.")
+                                                        f"New Path: __{new_path.content}__\n")
 
                                             await sleep(2)
                                             await confirmation.edit(content="Renaming category/channel...")
@@ -732,9 +847,15 @@ class Events(Cog):
                                 try:
                                     channel = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
                                 else:
                                     if channel.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     channel_id = int(channel.content.replace("<#", "").replace(">", ""))
@@ -789,9 +910,15 @@ class Events(Cog):
                                 try:
                                     path = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
                                 else:
                                     if path.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     try:
@@ -826,9 +953,15 @@ class Events(Cog):
                                 try:
                                     name = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
                                 else:
                                     if name.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     get_item = recurse_index(
@@ -876,10 +1009,16 @@ class Events(Cog):
                                 try:
                                     path = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
 
                                 else:
                                     if path.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     try:
@@ -915,9 +1054,15 @@ class Events(Cog):
                                 try:
                                     name = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
+                                    await reaction.message.clear_reactions()
+                                    await reaction.message.add_reaction("📝")
+                                    await reaction.message.add_reaction("🔄")
                                     return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
                                 else:
                                     if name.content == "+Cancel":
+                                        await reaction.message.clear_reactions()
+                                        await reaction.message.add_reaction("📝")
+                                        await reaction.message.add_reaction("🔄")
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     get_item = recurse_index(

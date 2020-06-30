@@ -168,6 +168,7 @@ class Globals:
         self.Loops = []
         self.LoadingUpdate = []
         self.using_gui = {}
+        self.pause_reaction_listening = []
         self.Directories = {"guildID": {"catagoryID": 0, "channelID": 0, "messageID": 0, "tree": {}}}
         self.cwd = getcwd()
 
@@ -430,14 +431,7 @@ class Bot(DiscordBot):
         directory_msg = await directory_ch.send("Updating...")
         self.univ.Directories[ctx.guild.id]["messageID"] = directory_msg.id
         async with directory_ch.typing():
-
-            await directory_msg.add_reaction("1️⃣")
-            await directory_msg.add_reaction("2️⃣")
-            await directory_msg.add_reaction("3️⃣")
-            await directory_msg.add_reaction("4️⃣")
-            await directory_msg.add_reaction("5️⃣")
-            await directory_msg.add_reaction("6️⃣")
-            await directory_msg.add_reaction("7️⃣")
+            await directory_msg.add_reaction("📝")
             await directory_msg.add_reaction("🔄")
 
             if not list(self.univ.Directories[ctx.guild.id]["tree"]["root"].items()):
