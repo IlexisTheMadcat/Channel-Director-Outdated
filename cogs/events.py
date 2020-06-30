@@ -6,10 +6,11 @@ from contextlib import suppress
 from copy import deepcopy
 
 # Site
-from discord import Reaction, User
+from discord import Reaction, Member
 from discord.channel import CategoryChannel
-from discord.ext.commands.context import Context
+from discord.errors import Forbidden
 from discord.ext.commands.cog import Cog
+from discord.ext.commands.context import Context
 from discord.ext.commands.errors import (
     BotMissingPermissions,
     MissingPermissions,
@@ -18,11 +19,11 @@ from discord.ext.commands.errors import (
     NotOwner,
     CommandOnCooldown
 )
-from discord.errors import Forbidden
 
 # Local
 from utils.classes import Bot
 from utils.directory_mgmt import loadingupdate as lucm, recurse_index, usinggui
+
 
 class Events(Cog):
     def __init__(self, bot: Bot):
@@ -34,8 +35,7 @@ class Events(Cog):
             with lucm(self.bot, channel.guild.id):
                 await sleep(5)
                 catch_id = deepcopy(self.bot.univ.Directories[channel.guild.id]["categoryID"])
-                await self.bot.update_directory(channel,
-                                                note="Updated automatically following channel deletion by user.")
+                await self.bot.update_directory(channel, note="Updated automatically following channel deletion by user.")
                 if isinstance(channel, CategoryChannel) and channel.id == catch_id:
                     async def recurse_move_channels(d: dict):
                         for key, val in d.items():
@@ -82,7 +82,7 @@ class Events(Cog):
                 pass
 
     @Cog.listener()
-    async def on_reaction_add(self, reaction: Reaction, user: User):
+    async def on_reaction_add(self, reaction: Reaction, user: Member):
         if reaction.message.guild and reaction.message.guild.id in self.bot.univ.Directories:
             if reaction.message.id == self.bot.univ.Directories[reaction.message.guild.id]["messageID"]:
                 if reaction.message.guild.id in self.bot.univ.pause_reaction_listening:
@@ -93,6 +93,18 @@ class Events(Cog):
                 else:
                     await reaction.remove(user)
 
+                # Check permissions for the user and bot
+                perms = user.permissions_in(reaction.message.channel)
+                if not perms.manage_channels:
+                    await reaction.message.channel.send(
+                        f"**{user}**, you require the \"Manage Channels\" permission in this channel to use this.",
+                        delete_after=5)
+                    return
+
+                dcategory = self.bot.get_channel(self.bot.univ.Directories[reaction.message.guild.id]["categoryID"])
+                bot_perms = reaction.message.guild.me.permissions_in(dcategory)
+
+                # Check if the GUI is already in use, one at a time
                 if reaction.message.guild.id in self.bot.univ.using_gui:
                     if self.bot.univ.using_gui[reaction.message.guild.id] == user.id:
                         await reaction.message.channel.send(
@@ -108,23 +120,13 @@ class Events(Cog):
                         )
                         return
 
+                # Begin operation
                 with usinggui(self.bot, reaction.message.guild.id, user.id):
                     if str(reaction.emoji) == "📝":
                         await reaction.message.clear_reactions()
 
-                        info = await reaction.message.channel.send(
-                            f"**{user}**, The above buttons are **guided** commands.\n"
-                            f"To cancel, simply wait about 10 seconds."
-                            "```\n"
-                            "1️⃣ = Create Channel\n"
-                            "2️⃣ = Create Category\n"
-                            "3️⃣ = Delete Category\n"
-                            "4️⃣ = Rename Category/Channel\n"
-                            "5️⃣ = Move Category/Channel\n"
-                            "6️⃣ = Import Channel\n"
-                            "7️⃣ = Hide Category/Channel\n"
-                            "```"
-                        )
+                        info = await reaction.message.channel.send("Please wait, loading editor controls...")
+
                         await reaction.message.add_reaction("1️⃣")
                         await reaction.message.add_reaction("2️⃣")
                         await reaction.message.add_reaction("3️⃣")
@@ -132,13 +134,32 @@ class Events(Cog):
                         await reaction.message.add_reaction("5️⃣")
                         await reaction.message.add_reaction("6️⃣")
                         await reaction.message.add_reaction("7️⃣")
+
+                        await info.edit(
+                            content=f"**{user}**\n"
+                                    "```\n"
+                                    "1️⃣ = Create Channel\n"
+                                    "2️⃣ = Create Category\n"
+                                    "3️⃣ = Delete Category\n"
+                                    "4️⃣ = Rename Category/Channel\n"
+                                    "5️⃣ = Move Category/Channel\n"
+                                    "6️⃣ = Import Channel\n"
+                                    "7️⃣ = Hide Category/Channel\n"
+                                    "```"
+                        )
                     else:
                         return
 
                     def check(rreaction, uuser):
-                        return str(rreaction.emoji) in ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"] and rreaction.message == reaction.message and uuser == user
+                        if str(rreaction.emoji) not in ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"]:
+                            await reaction.remove(user)
+
+                        return str(rreaction.emoji) in ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"] and \
+                            rreaction.message == reaction.message and \
+                            uuser == user
 
                     self.bot.univ.pause_reaction_listening.append(reaction.message.guild.id)
+                    # Pause listening
                     try:
                         reaction, user = await self.bot.wait_for("reaction_add", timeout=15, check=check)
                     except TimeoutError:
@@ -153,16 +174,31 @@ class Events(Cog):
                         await reaction.message.clear_reactions()
                         await info.delete()
 
+                        def check(msg):
+                            return msg.author == user and msg.channel == reaction.message.channel
+
                         if str(reaction.emoji) == "1️⃣":
+                            if not all((
+                                bot_perms.manage_channels,
+                                bot_perms.read_messages,
+                                bot_perms.send_message,
+                                bot_perms.manage_messages
+                            )):
+                                await user.send(
+                                    f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `create_channel` command also requires following permissions:\n"
+                                    f"```\n"
+                                    f"Manage Channels - To create new channels using the new channel system.\n"
+                                    f"```"
+                                )
+                                return
+
                             confirmation = await reaction.message.channel.send(
                                 f"**{user}**\n"
                                 f"[60 seconds] Enter the path where you would like to create this channel:\n"
                                 f"Path: \\_\\_\\_\\_\n"
                                 f"Name: \\_\\_\\_\\_\n"
                                 f"Type \"+Cancel\" to cancel.")
-
-                            def check(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
 
                             while True:
                                 try:
@@ -205,9 +241,6 @@ class Events(Cog):
                                                     f"Name: \\_\\_\\_\\_\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         break
-
-                            def check(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
 
                             while True:
                                 try:
@@ -263,15 +296,23 @@ class Events(Cog):
                                         break
 
                         elif str(reaction.emoji) == "2️⃣":
+                            if not all((
+                                bot_perms.read_messages,
+                                bot_perms.send_message,
+                                bot_perms.manage_messages
+                            )):
+                                await user.send(
+                                    f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `create_category` command requires no additional permissions."
+                                )
+                                return
+                                
                             confirmation = await reaction.message.channel.send(
                                 f"**{user}**\n"
                                 f"[60 seconds] Enter the path where you would like to create this category:\n"
                                 f"Path: \\_\\_\\_\\_\n"
                                 f"Name: \\_\\_\\_\\_\n"
                                 f"Type \"+Cancel\" to cancel.")
-
-                            def check(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
 
                             while True:
                                 try:
@@ -313,9 +354,6 @@ class Events(Cog):
                                                     f"Name: \\_\\_\\_\\_\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         break
-
-                            def check(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
 
                             while True:
                                 try:
@@ -372,15 +410,29 @@ class Events(Cog):
                                         break
 
                         elif str(reaction.emoji) == "3️⃣":
+                            if not all((
+                                bot_perms.manage_channels,
+                                bot_perms.read_messages,
+                                bot_perms.send_message,
+                                bot_perms.manage_messages
+                            )):
+                                await user.send(
+                                    f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `delete_category` command also requires following permissions:\n"
+                                    f"```\n"
+                                    f"Manage Channels - To delete channels under a V2* category.\n"
+                                    f"```\n"
+                                    f"\\* A V2 category is a category created by me, and is not associated with Discord. "
+                                    f"It is involved with the new system."
+                                )
+                                return
+
                             confirmation = await reaction.message.channel.send(
                                 f"**{user}**\n"
                                 f"[60 seconds] Enter the path where you would like to delete a category:\n"
                                 f"Path: \\_\\_\\_\\_\n"
                                 f"Name: \\_\\_\\_\\_\n"
                                 f"Type \"+Cancel\" to cancel.")
-
-                            def check(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
 
                             while True:
                                 try:
@@ -422,9 +474,6 @@ class Events(Cog):
                                                     f"Name: \\_\\_\\_\\_\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         break
-
-                            def check(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
 
                             while True:
                                 try:
@@ -490,6 +539,22 @@ class Events(Cog):
                                         break
 
                         elif str(reaction.emoji) == "4️⃣":
+                            if not all((
+                                bot_perms.manage_channels,
+                                bot_perms.read_messages,
+                                bot_perms.send_message,
+                                bot_perms.manage_messages
+                            )):
+                                await user.send(
+                                    f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `rename_channel` command also requires following permissions:\n"
+                                    f"```\n"
+                                    f"Manage Channels - To rename channels created with the new system.\n"
+                                    f"```\n"
+                                    f"This command can also rename V2\\* categories.\n"
+                                    f"\\* A V2 category is a category created by me, and is not associated with Discord."
+                                )
+
                             confirmation = await reaction.message.channel.send(
                                 f"**{user}**\n"
                                 f"[60 seconds] Enter the path where you would like to rename a category or channel:\n"
@@ -497,9 +562,6 @@ class Events(Cog):
                                 f"Name: \\_\\_\\_\\_\n"
                                 f"Rename: \\_\\_\\_\\_\n"
                                 f"Type \"+Cancel\" to cancel.")
-
-                            def check(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
 
                             while True:
                                 try:
@@ -543,9 +605,6 @@ class Events(Cog):
                                                     f"Rename: \\_\\_\\_\\_\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         break
-
-                            def check(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
 
                             while True:
                                 try:
@@ -599,12 +658,9 @@ class Events(Cog):
                                                     f"Type \"+Cancel\" to cancel.")
                                         break
 
-                            def check_rename(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
-
                             while True:
                                 try:
-                                    rename = await self.bot.wait_for("message", timeout=60, check=check_rename)
+                                    rename = await self.bot.wait_for("message", timeout=60, check=check)
                                 except TimeoutError:
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
@@ -660,6 +716,16 @@ class Events(Cog):
                                         break
 
                         elif str(reaction.emoji) == "5️⃣":
+                            if not all((
+                                bot_perms.read_messages,
+                                bot_perms.send_message,
+                                bot_perms.manage_messages
+                            )):
+                                await user.send(
+                                    f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `move_channel` command requires no additional permissions."
+                                )
+
                             confirmation = await reaction.message.channel.send(
                                 f"**{user}**\n"
                                 f"[60 seconds] Enter the path where you would like to move a category or channel:\n"
@@ -667,9 +733,6 @@ class Events(Cog):
                                 f"Name: \\_\\_\\_\\_\n"
                                 f"New Path: \\_\\_\\_\\_\n"
                                 f"Type \"+Cancel\" to cancel.")
-
-                            def check(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
 
                             while True:
                                 try:
@@ -713,9 +776,6 @@ class Events(Cog):
                                                     f"New Path: \\_\\_\\_\\_\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         break
-
-                            def check(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
 
                             while True:
                                 try:
@@ -768,9 +828,6 @@ class Events(Cog):
                                                     f"New Path: \\_\\_\\_\\_\\_\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         break
-
-                            def check(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
 
                             while True:
                                 try:
@@ -832,6 +889,16 @@ class Events(Cog):
                                             break
 
                         elif str(reaction.emoji) == "6️⃣":
+                            if not all((
+                                bot_perms.read_messages,
+                                bot_perms.send_message,
+                                bot_perms.manage_messages
+                            )):
+                                await user.send(
+                                    f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `import_channel` command requires no additional permissions."
+                                )
+
                             confirmation = await reaction.message.channel.send(
                                 f"**{user}**\n"
                                 f"[60 seconds] Mention the channel you would like to import:\n"
@@ -839,9 +906,6 @@ class Events(Cog):
                                 f"Path: \\_\\_\\_\\_\n"
                                 f"Name: \\_\\_\\_\\_\n"
                                 f"Type \"+Cancel\" to cancel.")
-
-                            def check(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
 
                             while True:
                                 try:
@@ -903,9 +967,6 @@ class Events(Cog):
                                                 f"Type \"+Cancel\" to cancel.")
                                     break
 
-                            def check(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
-
                             while True:
                                 try:
                                     path = await self.bot.wait_for("message", timeout=60, check=check)
@@ -922,7 +983,7 @@ class Events(Cog):
                                         return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
 
                                     try:
-                                        get_item = recurse_index(
+                                        recurse_index(
                                             self.bot.univ.Directories[reaction.message.guild.id]['tree'],
                                             path.content.split("//"))
                                     except KeyError as e:
@@ -945,9 +1006,6 @@ class Events(Cog):
                                                     f"Name: \\_\\_\\_\\_\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         break
-
-                            def check(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
 
                             while True:
                                 try:
@@ -995,15 +1053,22 @@ class Events(Cog):
                                         break
 
                         elif str(reaction.emoji) == "7️⃣":
+                            if not all((
+                                bot_perms.read_messages,
+                                bot_perms.send_message,
+                                bot_perms.manage_messages
+                            )):
+                                await user.send(
+                                    f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `hide_channel` command requires no additional permissions."
+                                )
+
                             confirmation = await reaction.message.channel.send(
                                 f"**{user}**\n"
                                 f"[60 seconds] Enter the path where channel you want to hide is located:\n"
                                 f"Path: \\_\\_\\_\\_\n"
                                 f"Name: \\_\\_\\_\\_\n"
                                 f"Type \"+Cancel\" to cancel.")
-
-                            def check(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
 
                             while True:
                                 try:
@@ -1046,9 +1111,6 @@ class Events(Cog):
                                                     f"Name: \\_\\_\\_\\_\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         break
-
-                            def check(msg):
-                                return msg.author == user and msg.channel == reaction.message.channel
 
                             while True:
                                 try:
@@ -1103,7 +1165,6 @@ class Events(Cog):
                                         await confirmation.delete()
                                         break
 
-
     @Cog.listener()
     async def on_raw_reaction_add(self, payload):
         channel = self.bot.get_channel(payload.channel_id)
@@ -1121,7 +1182,7 @@ class Events(Cog):
 
                     if ctx.guild.id in self.bot.univ.using_gui:
                         if self.bot.univ.using_gui[ctx.guild.id] == user.id:
-                            await ctx.message.channel.send(
+                            await ctx.channel.send(
                                 f"**{user}**, please answer the prompt first!",
                                 delete_after=5
                             )
@@ -1148,12 +1209,12 @@ class Events(Cog):
 
                 if ctx.command.name == "setup_directory":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text channels` and `Send Messages` permissions.\n"
-                        f"The `setup_directory` command also requires following permissions:\n"
+                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `setup_directory` command also requires following permissions:\n"
                         f"```\n"
                         f"Manage Channels - To create your new channel system. "
                         f"This will not erase any outside channels.\n"
-                        f"Add Reactions - To add buttons to make it more convenient to answer confirmation messages\n"
+                        f"Add Reactions - To add buttons to make it more convenient to answer confirmation messages.\n"
                         f"Manage Roles - To change the permissions "
                         f"in the \"directory\" channel so only you and the server owner "
                         f"(if you're not a higher role than me*) can edit until further permissions are set.\n"
@@ -1163,8 +1224,8 @@ class Events(Cog):
 
                 elif ctx.command.name == "teardown_directory":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text channels` and `Send Messages` permissions.\n"
-                        f"The `teardown_directory` command also requires following permissions:\n"
+                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `teardown_directory` command also requires following permissions:\n"
                         f"```\n"
                         f"Manage Channels - To delete channels under the managed category. "
                         f"This does not delete channels outside said category UNLESS a category ID is provided.\n"
@@ -1173,8 +1234,8 @@ class Events(Cog):
 
                 elif ctx.command.name == "create_channel":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text channels` and `Send Messages` permissions.\n"
-                        f"The `create_channel` command also requires following permissions:\n"
+                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `create_channel` command also requires following permissions:\n"
                         f"```\n"
                         f"Manage Channels - To create new channels using the new channel system.\n"
                         f"```"
@@ -1182,14 +1243,14 @@ class Events(Cog):
 
                 elif ctx.command.name == "create_category":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text channels` and `Send Messages` permissions.\n"
-                        f"The `create_category` command requires no additional permissions."
+                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `create_category` command requires no additional permissions."
                     )
 
                 elif ctx.command.name == "delete_category":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text channels` and `Send Messages` permissions.\n"
-                        f"The `delete_category` command also requires following permissions:\n"
+                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `delete_category` command also requires following permissions:\n"
                         f"```\n"
                         f"Manage Channels - To delete channels under a V2* category.\n"
                         f"```\n"
@@ -1199,8 +1260,8 @@ class Events(Cog):
 
                 elif ctx.command.name == "rename_channel":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text channels` and `Send Messages` permissions.\n"
-                        f"The `rename_channel` command also requires following permissions:\n"
+                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `rename_channel` command also requires following permissions:\n"
                         f"```\n"
                         f"Manage Channels - To rename channels created with the new system.\n"
                         f"```\n"
@@ -1210,20 +1271,32 @@ class Events(Cog):
 
                 elif ctx.command.name == "move_channel":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text channels` and `Send Messages` permissions.\n"
-                        f"The `move_channel` command requires no additional permissions."
+                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `move_channel` command requires no additional permissions."
                     )
 
                 elif ctx.command.name == "import_channel":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text channels` and `Send Messages` permissions.\n"
-                        f"The `import_channel` command requires no additional permissions."
+                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `import_channel` command requires no additional permissions."
                     )
 
                 elif ctx.command.name == "hide_channel":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text channels` and `Send Messages` permissions.\n"
-                        f"The `hide_channel` command requires no additional permissions."
+                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `hide_channel` command requires no additional permissions."
+                    )
+
+                elif ctx.command.name == "save_directory":
+                    await ctx.author.send(
+                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `save_directory` command requires no additional permissions."
+                    )
+
+                elif ctx.command.name == "preview_directory":
+                    await ctx.author.send(
+                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"The `preview_directory` command requires no additional permissions."
                     )
 
                 return
