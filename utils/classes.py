@@ -167,7 +167,8 @@ class Globals:
         self.Inactive = 0
         self.Loops = []
         self.LoadingUpdate = []
-        self.Directories = {"guildID": {"catagoryID": 0, "channelID": 0, "msgID": 0, "tree": {}}}
+        self.using_gui = {}
+        self.Directories = {"guildID": {"catagoryID": 0, "channelID": 0, "messageID": 0, "tree": {}}}
         self.cwd = getcwd()
 
         if exists(f"{self.cwd}/Serialized/data.pkl"):
@@ -181,7 +182,7 @@ class Globals:
                       "[] Loaded data.pkl.\n"
                       "#-------------------------------#\n")
             except Exception as e:
-                self.Directories = {"guildID": {"catagoryID": 0, "channelID": 0, "msgID": 0, "tree": {}}}
+                self.Directories = {"guildID": {"catagoryID": 0, "channelID": 0, "messageID": 0, "tree": {}}}
                 print("[Data Reset] Unpickling Error:", e)
 
 
@@ -196,17 +197,6 @@ class Bot(DiscordBot):
         # Capture extra meta from init for cogs, former `global`s
         self.auto_pull = kwargs.pop("auto_pull", True)
         self.debug_mode = kwargs.pop("debug_mode", False)
-        self.buttons = kwargs.pop("button_ids",
-                                  {
-                                      "create_ch": None,
-                                      "create_cat": None,
-                                      "delete_cat": None,
-                                      "rename": None,
-                                      "move": None,
-                                      "import": None,
-                                      "hide": None
-                                  }
-                                  )
 
         # Attribute for accessing tokens from file
         self.auth = PickleInterface(f"{self.cwd}/Serialized/tokens.pkl")
@@ -375,6 +365,37 @@ class Bot(DiscordBot):
 
         return True
 
+    def get_all_ids(
+            self,
+            d: dict,
+            c_ids: List[int],
+            depth: int = 1,
+    ):
+        """Recursively walk bot.Directories for guild and generate
+            a list of TextChannel.ids integers"""
+
+        d = {k: d[k] for k in sorted(d, key=lambda k: isinstance(d[k], dict))}
+
+        for key, val in d.items():
+            if isinstance(val, tuple):
+                channel = self.get_channel(val[0])
+
+                if channel is None:
+                    d.pop(key)
+                    return d
+
+                else:
+                    c_ids.append(channel.id)
+
+            elif isinstance(val, dict):
+                ret = self.get_all_ids(val, c_ids, depth + 1)
+
+                if isinstance(ret, dict):
+                    d[key] = ret
+                    return d
+
+        return c_ids
+
     async def update_directory(self, ctx, note="..."):
         """Update the directory associated with a guild"""
         if ctx.guild.id not in self.univ.Directories:
@@ -400,13 +421,25 @@ class Bot(DiscordBot):
             await directory_ch.edit(category=directory_cat)
 
         try:
-            directory_msg = await directory_ch.fetch_message(self.univ.Directories[ctx.guild.id]["msgID"])
+            directory_msg = await directory_ch.fetch_message(self.univ.Directories[ctx.guild.id]["messageID"])
         except NotFound:
-            directory_msg = await directory_ch.send("Completing repairs...")
-            self.univ.Directories[ctx.guild.id]["msgID"] = directory_msg.id
+            pass
+        else:
+            await directory_msg.delete()
 
+        directory_msg = await directory_ch.send("Updating...")
+        self.univ.Directories[ctx.guild.id]["messageID"] = directory_msg.id
         async with directory_ch.typing():
-            await sleep(1)
+
+            await directory_msg.add_reaction("1️⃣")
+            await directory_msg.add_reaction("2️⃣")
+            await directory_msg.add_reaction("3️⃣")
+            await directory_msg.add_reaction("4️⃣")
+            await directory_msg.add_reaction("5️⃣")
+            await directory_msg.add_reaction("6️⃣")
+            await directory_msg.add_reaction("7️⃣")
+            await directory_msg.add_reaction("🔄")
+
             if not list(self.univ.Directories[ctx.guild.id]["tree"]["root"].items()):
                 await sleep(2)
                 await directory_msg.edit(
