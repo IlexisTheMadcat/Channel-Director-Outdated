@@ -29,6 +29,7 @@ required_permissions_total = {
 }
 
 required_permissions = {
+    "read_messages": True,
     "manage_messages": True,
     "send_messages": True
 }
@@ -39,7 +40,7 @@ class Commands(Cog):
         self.bot = bot
         self.bot.remove_command("help")
 
-    @cooldown(1, 300, BucketType.guild)
+    # @cooldown(1, 300, BucketType.guild)
     @bot_has_permissions(manage_channels=True, add_reactions=True, manage_roles=True, **required_permissions)
     @has_permissions(manage_channels=True, manage_guild=True)
     @command(name="setup", aliases=["su"])
@@ -247,7 +248,8 @@ class Commands(Cog):
                                     )
 
                                     await self.bot.update_directory(ctx, note="Finished setup.")
-                                    await msg.edit(content=f"Finished setup. Get to the directory here: {directory.mention}")
+                                    await msg.edit(content=f"Finished setup. "
+                                                           f"Get to the directory here: {directory.mention}")
 
                                     return
 
@@ -315,7 +317,8 @@ class Commands(Cog):
                                         return
                                     else:
                                         await self.bot.update_directory(ctx=ctx, note="Finished automated setup.")
-                                        await msg.edit(content=f"Finished setup. Get to the directory here: {directory.mention}")
+                                        await msg.edit(content=f"Finished setup. "
+                                                               f"Get to the directory here: {directory.mention}")
 
                                     return
                         else:
@@ -424,21 +427,29 @@ class Commands(Cog):
                                 await sleep(2)
                                 await msg.edit(content="Tearing down...")
 
-                                try:
-                                    category = self.bot.get_channel(
-                                        self.bot.univ.Directories[ctx.guild.id]["categoryID"])
+                                tree = deepcopy(self.bot.univ.Directories[reaction.message.guild.id]["tree"])
+                                while True:
+                                    ids = self.bot.get_all_ids(tree, c_ids=list())
+                                    if isinstance(ids, dict):
+                                        tree = ids
+                                        continue
+                                    elif isinstance(ids, list):
+                                        break
 
-                                except NotFound:
-                                    await msg.edit(content="I couldn't find the category for the channels.")
-                                    self.bot.univ.Directories.pop(ctx.guild.id)
+                                for x in ids:
+                                    if not x[1]:
+                                        ch = self.bot.get_channel(x[0])
+                                        if ch:
+                                            await ch.delete()
+                                            await sleep(0.1)
 
-                                    return
-
-                                for i in category.channels:
-                                    await i.delete()
-                                    await sleep(0.1)
-
+                                category = self.bot.get_channel(
+                                    self.bot.univ.Directories[ctx.guild.id]["categoryID"])
                                 await category.delete()
+
+                                dchannel = self.bot.get_channel(
+                                    self.bot.univ.Directories[ctx.guild.id]["channelID"])
+                                await dchannel.delete()
 
                                 self.bot.univ.Directories.pop(ctx.guild.id)
 
@@ -741,7 +752,7 @@ class Commands(Cog):
                     await ctx.send(
                         "That's a channel silly! If you need to, go to the channel and delete it yourself. "
                         "I currently cannot do that myself.",
-                        delete_afte=10
+                        delete_after=10
                     )
                     return
 
