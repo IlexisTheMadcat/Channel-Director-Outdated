@@ -92,18 +92,18 @@ class Events(Cog):
                 if user == self.bot.user:
                     return
                 else:
-                    await reaction.remove(user)
+                    try:
+                        await reaction.remove(user)
+                    except Forbidden:
+                        await reaction.message.channel.send(f"**{user}**, I can't let you use the GUI because "
+                                                            f"I don't have the `Manage Messages` permission!",
+                                                            delete_after=5)
+                        return
 
                 # Check permissions for the user and bot
-                perms = user.permissions_in(reaction.message.channel)
-                if not perms.manage_channels:
-                    await reaction.message.channel.send(
-                        f"**{user}**, you require the \"Manage Channels\" permission in this channel to use this.",
-                        delete_after=5)
-                    return
-
                 dcategory = self.bot.get_channel(self.bot.univ.Directories[reaction.message.guild.id]["categoryID"])
                 bot_perms = reaction.message.guild.me.permissions_in(dcategory)
+                perms = user.permissions_in(reaction.message.channel)
 
                 # Check if the GUI is already in use, one at a time
                 if reaction.message.guild.id in self.bot.univ.using_gui:
@@ -123,6 +123,9 @@ class Events(Cog):
 
                 # Begin operation
                 with usinggui(self.bot, reaction.message.guild.id, user.id):
+                    if not perms.manage_channels:
+                        return await reaction.message.channel.send(f"**{user}**, You require the "
+                                                                   f"`Manage Channels` permission to use the GUI.")
                     if str(reaction.emoji) == "📝":
                         await reaction.message.clear_reactions()
 
@@ -185,6 +188,8 @@ class Events(Cog):
                                 bot_perms.send_messages,
                                 bot_perms.manage_messages
                             )):
+                                await reaction.message.add_reaction("📝")
+                                await reaction.message.add_reaction("🔄")
                                 await user.send(
                                     f"Every command requires the `Read Text Channels/Messages`, "
                                     f"`Send Messages` and `Manage Messages` permissions.\n"
@@ -313,6 +318,8 @@ class Events(Cog):
                                 bot_perms.send_messages,
                                 bot_perms.manage_messages
                             )):
+                                await reaction.message.add_reaction("📝")
+                                await reaction.message.add_reaction("🔄")
                                 await user.send(
                                     f"Every command requires the `Read Text Channels/Messages`, "
                                     f"`Send Messages` and `Manage Messages` permissions.\n"
@@ -439,6 +446,8 @@ class Events(Cog):
                                 bot_perms.send_messages,
                                 bot_perms.manage_messages
                             )):
+                                await reaction.message.add_reaction("📝")
+                                await reaction.message.add_reaction("🔄")
                                 await user.send(
                                     f"Every command requires the `Read Text Channels/Messages`, "
                                     f"`Send Messages` and `Manage Messages` permissions.\n"
@@ -581,6 +590,8 @@ class Events(Cog):
                                 bot_perms.send_messages,
                                 bot_perms.manage_messages
                             )):
+                                await reaction.message.add_reaction("📝")
+                                await reaction.message.add_reaction("🔄")
                                 await user.send(
                                     f"Every command requires the `Read Text Channels/Messages`, "
                                     f"`Send Messages` and `Manage Messages` permissions.\n"
@@ -773,6 +784,8 @@ class Events(Cog):
                                 bot_perms.send_messages,
                                 bot_perms.manage_messages
                             )):
+                                await reaction.message.add_reaction("📝")
+                                await reaction.message.add_reaction("🔄")
                                 await user.send(
                                     f"Every command requires the `Read Text Channels/Messages`, "
                                     f"`Send Messages` and `Manage Messages` permissions.\n"
@@ -962,6 +975,8 @@ class Events(Cog):
                                 bot_perms.send_messages,
                                 bot_perms.manage_messages
                             )):
+                                await reaction.message.add_reaction("📝")
+                                await reaction.message.add_reaction("🔄")
                                 await user.send(
                                     f"Every command requires the `Read Text Channels/Messages`, "
                                     f"`Send Messages` and `Manage Messages` permissions.\n"
@@ -1140,6 +1155,8 @@ class Events(Cog):
                                 bot_perms.send_messages,
                                 bot_perms.manage_messages
                             )):
+                                await reaction.message.add_reaction("📝")
+                                await reaction.message.add_reaction("🔄")
                                 await user.send(
                                     f"Every command requires the `Read Text Channels/Messages`, "
                                     f"`Send Messages` and `Manage Messages` permissions.\n"
@@ -1272,6 +1289,22 @@ class Events(Cog):
             if ctx.message.id == self.bot.univ.Directories[ctx.guild.id]["messageID"]:
                 if str(payload.emoji) == "🔄" and payload.user_id != self.bot.user.id:
 
+                    # Check permissions for the user and bot
+                    perms = user.permissions_in(ctx.channel)
+                    if not perms.manage_channels:
+                        await ctx.channel.send(
+                            f"**{user}**, you require the \"Manage Channels\" permission in this channel to use this.",
+                            delete_after=5)
+                        return
+
+                    dcategory = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
+                    bot_perms = ctx.guild.me.permissions_in(dcategory)
+
+                    if not bot_perms.manage_channels:
+                        await user.send("I can't update the directory because I don't have the `Manage Channels` permission!\n"
+                                        "If you would, please remove your reaction and keep the channel clean...")
+                        return
+
                     if ctx.guild.id in self.bot.univ.using_gui:
                         if self.bot.univ.using_gui[ctx.guild.id] == user.id:
                             await ctx.channel.send(
@@ -1293,12 +1326,12 @@ class Events(Cog):
     # Errors
     @Cog.listener()
     async def on_command_error(self, ctx: Context, error: Exception):
+        with suppress(Forbidden):
+            await ctx.message.add_reaction("❌")
+
         if not self.bot.debug_mode:
             msg = ctx.message
             if isinstance(error, BotMissingPermissions):
-                with suppress(Forbidden):
-                    await ctx.message.add_reaction("❌")
-
                 if ctx.command.name == "setup_directory":
                     await ctx.author.send(
                         f"Every command requires the `Read Text Channels/Messages`, "
