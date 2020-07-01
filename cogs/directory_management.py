@@ -40,7 +40,7 @@ class Commands(Cog):
         self.bot = bot
         self.bot.remove_command("help")
 
-    # @cooldown(1, 300, BucketType.guild)
+    @cooldown(1, 300, BucketType.guild)
     @bot_has_permissions(manage_channels=True, add_reactions=True, manage_roles=True, **required_permissions)
     @has_permissions(manage_channels=True, manage_guild=True)
     @command(name="setup", aliases=["su"])
@@ -69,9 +69,8 @@ class Commands(Cog):
                     await msg.add_reaction("🔄")
 
                 else:
-                    msg = await ctx.send("This setup will create a new category that you can edit, "
-                                         "**but you should never delete it**."
-                                         "\nThe category is used by the bot to identify "
+                    msg = await ctx.send("This setup will create a new category that you can edit.\n"
+                                         "The category is used by the bot to identify "
                                          "it as a storage system for the channels.\n\n"
                                          "The entire process is handled by me so, mind your manners, please.\n"
                                          "`[  ] (within 30 seconds)`"
@@ -154,13 +153,11 @@ class Commands(Cog):
 
                     else:
                         if str(reaction.emoji) == "❎":
-                            await msg.edit(content="This setup will create a new category that you can edit, "
-                                                   "**but you should never delete it**.\n"
+                            await msg.edit(content="This setup will create a new category that you can edit.\n"
                                                    "The category is used by the bot to identify "
                                                    "it as a storage system for the channels.\n\n"
-                                                   "The entire process is handled by me so, "
-                                                   "mind your manners, please.\n"
-                                                   "`[❎] (=================)`"
+                                                   "The entire process is handled by me so, mind your manners, please."
+                                                   "\n`[❎] (=================)`"
                                            )
 
                             await msg.clear_reactions()
@@ -171,13 +168,11 @@ class Commands(Cog):
                             return
 
                         elif str(reaction.emoji) == "✅":
-                            await msg.edit(content="This setup will create a new category that you can edit, "
-                                                   "**but you should never delete it**.\n"
+                            await msg.edit(content="This setup will create a new category that you can edit.\n"
                                                    "The category is used by the bot to identify "
                                                    "it as a storage system for the channels.\n\n"
-                                                   "The entire process is handled by me so, "
-                                                   "mind your manners, please.\n"
-                                                   "`[✅] (=================)`"
+                                                   "The entire process is handled by me so, mind your manners, please."
+                                                   "\n`[✅] (=================)`"
                                            )
                     await msg.clear_reactions()
                     await sleep(2)
@@ -378,8 +373,8 @@ class Commands(Cog):
                             return
 
                         msg = await ctx.send(
-                            "Are you sure? **This will delete EVERY channel "
-                            "under the managed category**, imported or not.\n"
+                            "Are you sure? **This will delete every channel"
+                            "created by the bot unless it is imported**.\n"
                             "If you want to, you can save your directory first using the `save_directory` command.\n"
                             "`[  ] (within 30 seconds)`"
                             )
@@ -402,8 +397,8 @@ class Commands(Cog):
                             await msg.clear_reactions()
                             if str(reaction.emoji) == "❎":
                                 await msg.edit(
-                                    content="Are you sure? **This will delete EVERY channel "
-                                            "under the managed category**, imported or not.\n"
+                                    content="Are you sure? **This will delete every channel"
+                                            "created by the bot unless it is imported**.\n"
                                             "If you want to, you can save your directory first "
                                             "using the `save_directory` command.\n"
                                             "`[❎] (=================)`"
@@ -417,8 +412,8 @@ class Commands(Cog):
 
                             elif str(reaction.emoji) == "✅":
                                 await msg.edit(
-                                    content="Are you sure? **This will delete EVERY channel "
-                                            "under the managed category**, imported or not.\n"
+                                    content="Are you sure? **This will delete every channel"
+                                            "created by the bot unless it is imported**.\n"
                                             "If you want to, you can save your directory first "
                                             "using the `save_directory` command.\n"
                                             "`[✅] (=================)`"
@@ -427,6 +422,7 @@ class Commands(Cog):
                                 await sleep(2)
                                 await msg.edit(content="Tearing down...")
 
+                                await self.bot.update_directory(ctx, note="Memory updated; Teardown in progress;")
                                 tree = deepcopy(self.bot.univ.Directories[reaction.message.guild.id]["tree"])
                                 while True:
                                     ids = self.bot.get_all_ids(tree, c_ids=list())
