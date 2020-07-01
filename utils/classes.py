@@ -369,7 +369,7 @@ class Bot(DiscordBot):
     def get_all_ids(
             self,
             d: dict,
-            c_ids: List[int],
+            c_ids: List[Tuple[int, bool]],
             depth: int = 1,
     ):
         """Recursively walk bot.Directories for guild and generate
@@ -386,7 +386,7 @@ class Bot(DiscordBot):
                     return d
 
                 else:
-                    c_ids.append(channel.id)
+                    c_ids.append(val)
 
             elif isinstance(val, dict):
                 ret = self.get_all_ids(val, c_ids, depth + 1)

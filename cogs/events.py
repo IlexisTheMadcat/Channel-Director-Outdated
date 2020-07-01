@@ -35,7 +35,8 @@ class Events(Cog):
             with lucm(self.bot, channel.guild.id):
                 await sleep(5)
                 catch_id = deepcopy(self.bot.univ.Directories[channel.guild.id]["categoryID"])
-                await self.bot.update_directory(channel, note="Updated automatically following channel deletion by user.")
+                await self.bot.update_directory(channel,
+                                                note="Updated automatically following channel deletion by user.")
                 if isinstance(channel, CategoryChannel) and channel.id == catch_id:
                     async def recurse_move_channels(d: dict):
                         for key, val in d.items():
@@ -150,9 +151,9 @@ class Events(Cog):
                     else:
                         return
 
-                    def check(rreaction, uuser):
+                    def check_react(rreaction, uuser):
                         if str(rreaction.emoji) not in ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"]:
-                            await reaction.remove(user)
+                            self.bot.loop.create_task(reaction.remove(user))
 
                         return str(rreaction.emoji) in ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"] and \
                             rreaction.message == reaction.message and \
@@ -161,7 +162,7 @@ class Events(Cog):
                     self.bot.univ.pause_reaction_listening.append(reaction.message.guild.id)
                     # Pause listening
                     try:
-                        reaction, user = await self.bot.wait_for("reaction_add", timeout=15, check=check)
+                        reaction, user = await self.bot.wait_for("reaction_add", timeout=15, check=check_react)
                     except TimeoutError:
                         self.bot.univ.pause_reaction_listening.remove(reaction.message.guild.id)
                         await reaction.message.clear_reactions()
@@ -181,11 +182,12 @@ class Events(Cog):
                             if not all((
                                 bot_perms.manage_channels,
                                 bot_perms.read_messages,
-                                bot_perms.send_message,
+                                bot_perms.send_messages,
                                 bot_perms.manage_messages
                             )):
                                 await user.send(
-                                    f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"Every command requires the `Read Text Channels/Messages`, "
+                                    f"`Send Messages` and `Manage Messages` permissions.\n"
                                     f"The `create_channel` command also requires following permissions:\n"
                                     f"```\n"
                                     f"Manage Channels - To create new channels using the new channel system.\n"
@@ -207,14 +209,16 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.",
+                                                                   delete_after=5)
 
                                 else:
                                     if path.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     try:
                                         get_item = recurse_index(
@@ -227,10 +231,12 @@ class Events(Cog):
                                     except KeyError as e:
                                         await confirmation.edit(
                                             content=f"**{user}**\n"
-                                                    f"[60 seconds] Enter the path where you would like to create this channel:\n"
+                                                    f"[60 seconds] "
+                                                    f"Enter the path where you would like to create this channel:\n"
                                                     f"Path: \\_\\_\\_\\_\n"
                                                     f"Name: \\_\\_\\_\\_\n"
-                                                    f":warning: That directory doesn't exist. Level `{e}` is not found.\n"
+                                                    f":warning: That directory doesn't exist. "
+                                                    f"Level `{e}` is not found.\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         continue
                                     else:
@@ -249,13 +255,15 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.",
+                                                                   delete_after=5)
                                 else:
                                     if name.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     get_item = recurse_index(
                                         self.bot.univ.Directories[reaction.message.guild.id]['tree'],
@@ -267,7 +275,8 @@ class Events(Cog):
                                                     f"[60 seconds] Now, enter the name of your new channel:\n"
                                                     f"Path: __{path.content}__\n"
                                                     f"Name: \\_\\_\\_\\_\n"
-                                                    f":warning: A category/channel with that name already exists in that directory.\n"
+                                                    f":warning: A category/channel with that name "
+                                                    f"already exists in that directory.\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         continue
 
@@ -291,18 +300,22 @@ class Events(Cog):
                                         await sleep(2)
                                         await confirmation.edit(content="Adding new channel...")
                                         ctx = await self.bot.get_context(reaction.message)
-                                        await self.bot.get_command("create_channel").callback(self, ctx, path.content, name.content)
+                                        await self.bot.get_command("create_channel").callback(self, ctx,
+                                                                                              path.content,
+                                                                                              name.content
+                                                                                              )
                                         await confirmation.delete()
                                         break
 
                         elif str(reaction.emoji) == "2️⃣":
                             if not all((
                                 bot_perms.read_messages,
-                                bot_perms.send_message,
+                                bot_perms.send_messages,
                                 bot_perms.manage_messages
                             )):
                                 await user.send(
-                                    f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"Every command requires the `Read Text Channels/Messages`, "
+                                    f"`Send Messages` and `Manage Messages` permissions.\n"
                                     f"The `create_category` command requires no additional permissions."
                                 )
                                 return
@@ -321,13 +334,15 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.",
+                                                                   delete_after=5)
                                 else:
                                     if path.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     try:
                                         get_item = recurse_index(
@@ -340,10 +355,12 @@ class Events(Cog):
                                     except KeyError as e:
                                         await confirmation.edit(
                                             content=f"**{user}**\n"
-                                                    f"[60 seconds] Enter the path where you would like to create this category:\n "
+                                                    f"[60 seconds] "
+                                                    f"Enter the path where you would like to create this category:\n "
                                                     f"Path: \\_\\_\\_\\_\n"
                                                     f"Name: \\_\\_\\_\\_\n"
-                                                    f":warning: That directory doesn't exist. Level `{e}` is not found.\n"
+                                                    f":warning: That directory doesn't exist. "
+                                                    f"Level `{e}` is not found.\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         continue
                                     else:
@@ -362,13 +379,15 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** timed out.")
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.",
+                                                                   delete_after=5)
                                 else:
                                     if name.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     get_item = recurse_index(
                                         self.bot.univ.Directories[reaction.message.guild.id]['tree'],
@@ -380,7 +399,8 @@ class Events(Cog):
                                                     f"[60 seconds] Now, enter the name of your new category:\n"
                                                     f"Path: __{path.content}__\n"
                                                     f"Name: \\_\\_\\_\\_\n"
-                                                    f":warning: A category/channel with that name already exists in that directory.\n"
+                                                    f":warning: A category/channel with that name "
+                                                    f"already exists in that directory.\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         continue
 
@@ -405,7 +425,10 @@ class Events(Cog):
                                         await sleep(2)
                                         await confirmation.edit(content="Adding new category...")
                                         ctx = await self.bot.get_context(reaction.message)
-                                        await self.bot.get_command("create_category").callback(self, ctx, path.content, name.content)
+                                        await self.bot.get_command("create_category").callback(self, ctx,
+                                                                                               path.content,
+                                                                                               name.content
+                                                                                               )
                                         await confirmation.delete()
                                         break
 
@@ -413,16 +436,18 @@ class Events(Cog):
                             if not all((
                                 bot_perms.manage_channels,
                                 bot_perms.read_messages,
-                                bot_perms.send_message,
+                                bot_perms.send_messages,
                                 bot_perms.manage_messages
                             )):
                                 await user.send(
-                                    f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"Every command requires the `Read Text Channels/Messages`, "
+                                    f"`Send Messages` and `Manage Messages` permissions.\n"
                                     f"The `delete_category` command also requires following permissions:\n"
                                     f"```\n"
                                     f"Manage Channels - To delete channels under a V2* category.\n"
                                     f"```\n"
-                                    f"\\* A V2 category is a category created by me, and is not associated with Discord. "
+                                    f"\\* A V2 category is a category created by me, "
+                                    f"and is not associated with Discord. "
                                     f"It is involved with the new system."
                                 )
                                 return
@@ -441,13 +466,15 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                    return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                   delete_after=5)
                                 else:
                                     if path.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     try:
                                         get_item = recurse_index(
@@ -460,10 +487,12 @@ class Events(Cog):
                                     except KeyError as e:
                                         await confirmation.edit(
                                             content=f"**{user}**\n"
-                                                    f"[60 seconds] Enter the path where you would like to delete a category:\n "
+                                                    f"[60 seconds] "
+                                                    f"Enter the path where you would like to delete a category:\n "
                                                     f"Path: \\_\\_\\_\\_\n"
                                                     f"Name: \\_\\_\\_\\_\n"
-                                                    f":warning: That directory doesn't exist. Level `{e}` is not found.\n"
+                                                    f":warning: That directory doesn't exist. "
+                                                    f"Level `{e}` is not found.\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         continue
                                     else:
@@ -482,13 +511,15 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.",
+                                                                   delete_after=5)
                                 else:
                                     if name.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     get_item = recurse_index(
                                         self.bot.univ.Directories[reaction.message.guild.id]['tree'],
@@ -500,17 +531,19 @@ class Events(Cog):
                                                     f"[60 seconds] Now, enter the name of the target category:\n"
                                                     f"Path: __{path.content}__\n"
                                                     f"Name: \\_\\_\\_\\_\n"
-                                                    f":warning: A category with that name doesn't exist in that directory.\n"
+                                                    f":warning: A category with that name "
+                                                    f"doesn't exist in that directory.\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         continue
 
-                                    elif isinstance(get_item, tuple):
+                                    elif isinstance(get_item[name.content], tuple):
                                         await confirmation.edit(
                                             content=f"**{user}**\n"
                                                     f"[60 seconds] Now, enter the name of the target category:\n"
                                                     f"Path: __{path.content}__\n"
                                                     f"Name: \\_\\_\\_\\_\n"
-                                                    f":warning: That's a channel, not a category. Navigate to the channel and delete it manually.\n"
+                                                    f":warning: That's a channel, not a category. "
+                                                    f"Navigate to the channel to delete it manually.\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         continue
 
@@ -534,7 +567,10 @@ class Events(Cog):
                                         await sleep(2)
                                         await confirmation.edit(content="Deleting category...")
                                         ctx = await self.bot.get_context(reaction.message)
-                                        await self.bot.get_command("delete_category").callback(self, ctx, path.content, name.content)
+                                        await self.bot.get_command("delete_category").callback(self, ctx,
+                                                                                               path.content,
+                                                                                               name.content
+                                                                                               )
                                         await confirmation.delete()
                                         break
 
@@ -542,17 +578,19 @@ class Events(Cog):
                             if not all((
                                 bot_perms.manage_channels,
                                 bot_perms.read_messages,
-                                bot_perms.send_message,
+                                bot_perms.send_messages,
                                 bot_perms.manage_messages
                             )):
                                 await user.send(
-                                    f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"Every command requires the `Read Text Channels/Messages`, "
+                                    f"`Send Messages` and `Manage Messages` permissions.\n"
                                     f"The `rename_channel` command also requires following permissions:\n"
                                     f"```\n"
                                     f"Manage Channels - To rename channels created with the new system.\n"
                                     f"```\n"
                                     f"This command can also rename V2\\* categories.\n"
-                                    f"\\* A V2 category is a category created by me, and is not associated with Discord."
+                                    f"\\* A V2 category is a category created by me, "
+                                    f"and is not associated with Discord."
                                 )
 
                             confirmation = await reaction.message.channel.send(
@@ -570,13 +608,15 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.",
+                                                                   delete_after=5)
                                 else:
                                     if path.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     try:
                                         get_item = recurse_index(
@@ -589,11 +629,13 @@ class Events(Cog):
                                     except KeyError as e:
                                         await confirmation.edit(
                                             content=f"**{user}**\n"
-                                                    f"[60 seconds] Enter the path where you would like to rename a category or channel:\n "
+                                                    f"[60 seconds] Enter the path where you would "
+                                                    f"like to rename a category or channel:\n "
                                                     f"Path: \\_\\_\\_\\_\n"
                                                     f"Name: \\_\\_\\_\\_\n"
                                                     f"Rename: \\_\\_\\_\\_\n"
-                                                    f":warning: That directory doesn't exist. Level `{e}` is not found.\n"
+                                                    f":warning: That directory doesn't exist. "
+                                                    f"Level `{e}` is not found.\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         continue
                                     else:
@@ -613,13 +655,15 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.",
+                                                                   delete_after=5)
                                 else:
                                     if name.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     get_item = recurse_index(
                                         self.bot.univ.Directories[reaction.message.guild.id]['tree'],
@@ -632,7 +676,8 @@ class Events(Cog):
                                                     f"Path: __{path.content}__\n"
                                                     f"Name: \\_\\_\\_\\_\n"
                                                     f"Rename: \\_\\_\\_\\_\n"
-                                                    f":warning: A category/channel with that name doesn't exist in that directory.\n"
+                                                    f":warning: A category/channel with that name "
+                                                    f"doesn't exist in that directory.\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         continue
 
@@ -665,13 +710,15 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                    return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                   delete_after=5)
                                 else:
                                     if rename.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     get_item = recurse_index(
                                         self.bot.univ.Directories[reaction.message.guild.id]['tree'],
@@ -684,7 +731,8 @@ class Events(Cog):
                                                     f"Path: __{path.content}__\n"
                                                     f"Name: __{name.content}__\n"
                                                     f"Rename: \\_\\_\\_\\_\n"
-                                                    f":warning: A category/channel with that name already exists in that directory.\n"
+                                                    f":warning: A category/channel with that name "
+                                                    f"already exists in that directory.\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         continue
 
@@ -711,18 +759,23 @@ class Events(Cog):
                                         await sleep(2)
                                         await confirmation.edit(content="Renaming category/channel...")
                                         ctx = await self.bot.get_context(reaction.message)
-                                        await self.bot.get_command("rename_channel").callback(self, ctx, path.content, name.content, rename.content)
+                                        await self.bot.get_command("rename_channel").callback(self, ctx,
+                                                                                              path.content,
+                                                                                              name.content,
+                                                                                              rename.content
+                                                                                              )
                                         await confirmation.delete()
                                         break
 
                         elif str(reaction.emoji) == "5️⃣":
                             if not all((
                                 bot_perms.read_messages,
-                                bot_perms.send_message,
+                                bot_perms.send_messages,
                                 bot_perms.manage_messages
                             )):
                                 await user.send(
-                                    f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"Every command requires the `Read Text Channels/Messages`, "
+                                    f"`Send Messages` and `Manage Messages` permissions.\n"
                                     f"The `move_channel` command requires no additional permissions."
                                 )
 
@@ -741,13 +794,15 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.",
+                                                                   delete_after=5)
                                 else:
                                     if path.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     try:
                                         get_item = recurse_index(
@@ -760,11 +815,13 @@ class Events(Cog):
                                     except KeyError as e:
                                         await confirmation.edit(
                                             content=f"**{user}**\n"
-                                                    f"[60 seconds] Enter the path where you would like to move a category or channel:\n "
+                                                    f"[60 seconds] Enter the path where you would "
+                                                    f"like to move a category or channel:\n "
                                                     f"Path: \\_\\_\\_\\_\n"
                                                     f"Name: \\_\\_\\_\\_\n"
                                                     f"New Path: \\_\\_\\_\\_\n"
-                                                    f":warning: That directory doesn't exist. Level `{e}` is not found.\n"
+                                                    f":warning: That directory doesn't exist. "
+                                                    f"Level `{e}` is not found.\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         continue
                                     else:
@@ -784,13 +841,15 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.",
+                                                                   delete_after=5)
                                 else:
                                     if name.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     get_item = recurse_index(
                                         self.bot.univ.Directories[reaction.message.guild.id]['tree'],
@@ -803,7 +862,8 @@ class Events(Cog):
                                                     f"Path: __{path.content}__\n"
                                                     f"Name: \\_\\_\\_\\_\n"
                                                     f"New Path: \\_\\_\\_\\_\n"
-                                                    f":warning: A category/channel with that name doesn't exist in that directory.\n"
+                                                    f":warning: A category/channel with that name "
+                                                    f"doesn't exist in that directory.\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         continue
 
@@ -836,13 +896,15 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                    return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                   delete_after=5)
                                 else:
                                     if new_path.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     try:
                                         get_new_item = recurse_index(
@@ -859,7 +921,8 @@ class Events(Cog):
                                                     f"Path: __{path.content}__\n"
                                                     f"Name: __{name.content}__\n"
                                                     f"New Path: \\_\\_\\_\\_\n"
-                                                    f":warning: Your destination path doesn't exist. Level `{e}` is not found.\n"
+                                                    f":warning: Your destination path doesn't exist. "
+                                                    f"Level `{e}` is not found.\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         continue
                                     else:
@@ -870,7 +933,8 @@ class Events(Cog):
                                                         f"Path: __{path.content}__\n"
                                                         f"Name: __{name.content}__\n"
                                                         f"New Path: \\_\\_\\_\\_\n"
-                                                        f":warning: A category/channel already has the same name as your target. Rename either channel and try again.\n"
+                                                        f":warning: A category/channel already has the same name "
+                                                        f"as your target. Rename either channel and try again.\n"
                                                         f"Type \"+Cancel\" to cancel.")
                                             continue
                                         else:
@@ -884,18 +948,23 @@ class Events(Cog):
                                             await sleep(2)
                                             await confirmation.edit(content="Renaming category/channel...")
                                             ctx = await self.bot.get_context(reaction.message)
-                                            await self.bot.get_command("move_channel").callback(self, ctx, path.content, name.content, new_path.content)
+                                            await self.bot.get_command("move_channel").callback(self, ctx,
+                                                                                                path.content,
+                                                                                                name.content,
+                                                                                                new_path.content
+                                                                                                )
                                             await confirmation.delete()
                                             break
 
                         elif str(reaction.emoji) == "6️⃣":
                             if not all((
                                 bot_perms.read_messages,
-                                bot_perms.send_message,
+                                bot_perms.send_messages,
                                 bot_perms.manage_messages
                             )):
                                 await user.send(
-                                    f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"Every command requires the `Read Text Channels/Messages`, "
+                                    f"`Send Messages` and `Manage Messages` permissions.\n"
                                     f"The `import_channel` command requires no additional permissions."
                                 )
 
@@ -914,15 +983,18 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.",
+                                                                   delete_after=5)
                                 else:
                                     if channel.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     channel_id = int(channel.content.replace("<#", "").replace(">", ""))
+
                                     channel_found = self.bot.get_channel(channel_id)
 
                                     if not channel_found:
@@ -945,22 +1017,23 @@ class Events(Cog):
                                         elif isinstance(ids, list):
                                             break
 
-                                    if isinstance(ids, list):
-                                        if channel_found.id in ids:
-                                            await confirmation.edit(
-                                                content=f"**{user}**\n"
-                                                        f"[60 seconds] Now, enter the name to import this channel as:\n"
-                                                        f"Channal: \\_\\_\\_\\_\n"
-                                                        f"Path: \\_\\_\\_\\_\n"
-                                                        f"Name: \\_\\_\\_\\_\n"
-                                                        f":warning: That channel is already in the directory. "
-                                                        f"It was either created with the new system, or already imported.\n"
-                                                        f"Type \"+Cancel\" to cancel.")
-                                            continue
+                                    if channel_found.id in [cid[0] for cid in ids]:
+                                        await confirmation.edit(
+                                            content=f"**{user}**\n"
+                                                    f"[60 seconds] Now, enter the name to import this channel as:\n"
+                                                    f"Channal: \\_\\_\\_\\_\n"
+                                                    f"Path: \\_\\_\\_\\_\n"
+                                                    f"Name: \\_\\_\\_\\_\n"
+                                                    f":warning: That channel is already in the directory. "
+                                                    f"It was either created with the new system, "
+                                                    f"or already imported.\n"
+                                                    f"Type \"+Cancel\" to cancel.")
+                                        continue
 
                                     await confirmation.edit(
                                         content=f"**{user}**\n"
-                                                f"[60 seconds] Now, enter the path you would like to import this channel into:\n"
+                                                f"[60 seconds] Now, enter the path you would "
+                                                f"like to import this channel into:\n"
                                                 f"Channel: __{channel_found.mention}__\n"
                                                 f"Path: \\_\\_\\_\\_\n"
                                                 f"Name: \\_\\_\\_\\_\n"
@@ -974,13 +1047,15 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.",
+                                                                   delete_after=5)
                                 else:
                                     if path.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     try:
                                         recurse_index(
@@ -989,7 +1064,8 @@ class Events(Cog):
                                     except KeyError as e:
                                         await confirmation.edit(
                                             content=f"**{user}**\n"
-                                                    f"[60 seconds] Now, enter the path you would like to import this channel into:\n"
+                                                    f"[60 seconds] Now, enter the path you would "
+                                                    f"like to import this channel into:\n"
                                                     f"Channel: __{channel_found.mention}__\n"
                                                     f"Path: \\_\\_\\_\\_\n"
                                                     f"Name: \\_\\_\\_\\_\n"
@@ -1014,13 +1090,15 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                    return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                   delete_after=5)
                                 else:
                                     if name.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     get_item = recurse_index(
                                         self.bot.univ.Directories[reaction.message.guild.id]['tree'],
@@ -1048,18 +1126,23 @@ class Events(Cog):
                                         await sleep(2)
                                         await confirmation.edit(content="Importing channel...")
                                         ctx = await self.bot.get_context(reaction.message)
-                                        await self.bot.get_command("import_channel").callback(self, ctx, channel_found, path.content, name.content)
+                                        await self.bot.get_command("import_channel").callback(self, ctx,
+                                                                                              channel_found,
+                                                                                              path.content,
+                                                                                              name.content
+                                                                                              )
                                         await confirmation.delete()
                                         break
 
                         elif str(reaction.emoji) == "7️⃣":
                             if not all((
                                 bot_perms.read_messages,
-                                bot_perms.send_message,
+                                bot_perms.send_messages,
                                 bot_perms.manage_messages
                             )):
                                 await user.send(
-                                    f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
+                                    f"Every command requires the `Read Text Channels/Messages`, "
+                                    f"`Send Messages` and `Manage Messages` permissions.\n"
                                     f"The `hide_channel` command requires no additional permissions."
                                 )
 
@@ -1077,14 +1160,16 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.",
+                                                                   delete_after=5)
 
                                 else:
                                     if path.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     try:
                                         get_item = recurse_index(
@@ -1097,10 +1182,12 @@ class Events(Cog):
                                     except KeyError as e:
                                         await confirmation.edit(
                                             content=f"**{user}**\n"
-                                                    f"[60 seconds] Enter the path where channel you want to hide is located:\n"
+                                                    f"[60 seconds] Enter the path where channel "
+                                                    f"you want to hide is located:\n"
                                                     f"Path: \\_\\_\\_\\_\n"
                                                     f"Name: \\_\\_\\_\\_\n"
-                                                    f":warning: That directory doesn't exist. Level `{e}` is not found.\n"
+                                                    f":warning: That directory doesn't exist. "
+                                                    f"Level `{e}` is not found.\n"
                                                     f"Type \"+Cancel\" to cancel.")
                                         continue
                                     else:
@@ -1119,13 +1206,15 @@ class Events(Cog):
                                     await reaction.message.clear_reactions()
                                     await reaction.message.add_reaction("📝")
                                     await reaction.message.add_reaction("🔄")
-                                    return await confirmation.edit(content=f":x: **{user}** timed out.", delete_after=5)
+                                    return await confirmation.edit(content=f":x: **{user}** timed out.",
+                                                                   delete_after=5)
                                 else:
                                     if name.content == "+Cancel":
                                         await reaction.message.clear_reactions()
                                         await reaction.message.add_reaction("📝")
                                         await reaction.message.add_reaction("🔄")
-                                        return await confirmation.edit(content=f":x: **{user}** cancelled.", delete_after=5)
+                                        return await confirmation.edit(content=f":x: **{user}** cancelled.",
+                                                                       delete_after=5)
 
                                     get_item = recurse_index(
                                         self.bot.univ.Directories[reaction.message.guild.id]['tree'],
@@ -1161,7 +1250,10 @@ class Events(Cog):
                                         await sleep(2)
                                         await confirmation.edit(content="Hiding channel...")
                                         ctx = await self.bot.get_context(reaction.message)
-                                        await self.bot.get_command("hide_channel").callback(self, ctx, path.content, name.content)
+                                        await self.bot.get_command("hide_channel").callback(self, ctx,
+                                                                                            path.content,
+                                                                                            name.content
+                                                                                            )
                                         await confirmation.delete()
                                         break
 
@@ -1209,8 +1301,9 @@ class Events(Cog):
 
                 if ctx.command.name == "setup_directory":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
-                                    f"The `setup_directory` command also requires following permissions:\n"
+                        f"Every command requires the `Read Text Channels/Messages`, "
+                        f"`Send Messages` and `Manage Messages` permissions.\n"
+                        f"The `setup_directory` command also requires following permissions:\n"
                         f"```\n"
                         f"Manage Channels - To create your new channel system. "
                         f"This will not erase any outside channels.\n"
@@ -1224,8 +1317,9 @@ class Events(Cog):
 
                 elif ctx.command.name == "teardown_directory":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
-                                    f"The `teardown_directory` command also requires following permissions:\n"
+                        f"Every command requires the `Read Text Channels/Messages`, "
+                        f"`Send Messages` and `Manage Messages` permissions.\n"
+                        f"The `teardown_directory` command also requires following permissions:\n"
                         f"```\n"
                         f"Manage Channels - To delete channels under the managed category. "
                         f"This does not delete channels outside said category UNLESS a category ID is provided.\n"
@@ -1234,8 +1328,9 @@ class Events(Cog):
 
                 elif ctx.command.name == "create_channel":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
-                                    f"The `create_channel` command also requires following permissions:\n"
+                        f"Every command requires the `Read Text Channels/Messages`, "
+                        f"`Send Messages` and `Manage Messages` permissions.\n"
+                        f"The `create_channel` command also requires following permissions:\n"
                         f"```\n"
                         f"Manage Channels - To create new channels using the new channel system.\n"
                         f"```"
@@ -1243,14 +1338,16 @@ class Events(Cog):
 
                 elif ctx.command.name == "create_category":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
-                                    f"The `create_category` command requires no additional permissions."
+                        f"Every command requires the `Read Text Channels/Messages`, "
+                        f"`Send Messages` and `Manage Messages` permissions.\n"
+                        f"The `create_category` command requires no additional permissions."
                     )
 
                 elif ctx.command.name == "delete_category":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
-                                    f"The `delete_category` command also requires following permissions:\n"
+                        f"Every command requires the `Read Text Channels/Messages`, "
+                        f"`Send Messages` and `Manage Messages` permissions.\n"
+                        f"The `delete_category` command also requires following permissions:\n"
                         f"```\n"
                         f"Manage Channels - To delete channels under a V2* category.\n"
                         f"```\n"
@@ -1260,8 +1357,9 @@ class Events(Cog):
 
                 elif ctx.command.name == "rename_channel":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
-                                    f"The `rename_channel` command also requires following permissions:\n"
+                        f"Every command requires the `Read Text Channels/Messages`, "
+                        f"`Send Messages` and `Manage Messages` permissions.\n"
+                        f"The `rename_channel` command also requires following permissions:\n"
                         f"```\n"
                         f"Manage Channels - To rename channels created with the new system.\n"
                         f"```\n"
@@ -1271,32 +1369,37 @@ class Events(Cog):
 
                 elif ctx.command.name == "move_channel":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
-                                    f"The `move_channel` command requires no additional permissions."
+                        f"Every command requires the `Read Text Channels/Messages`, "
+                        f"`Send Messages` and `Manage Messages` permissions.\n"
+                        f"The `move_channel` command requires no additional permissions."
                     )
 
                 elif ctx.command.name == "import_channel":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
-                                    f"The `import_channel` command requires no additional permissions."
+                        f"Every command requires the `Read Text Channels/Messages`, "
+                        f"`Send Messages` and `Manage Messages` permissions.\n"
+                        f"The `import_channel` command requires no additional permissions."
                     )
 
                 elif ctx.command.name == "hide_channel":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
-                                    f"The `hide_channel` command requires no additional permissions."
+                        f"Every command requires the `Read Text Channels/Messages`, "
+                        f"`Send Messages` and `Manage Messages` permissions.\n"
+                        f"The `hide_channel` command requires no additional permissions."
                     )
 
                 elif ctx.command.name == "save_directory":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
-                                    f"The `save_directory` command requires no additional permissions."
+                        f"Every command requires the `Read Text Channels/Messages`, "
+                        f"`Send Messages` and `Manage Messages` permissions.\n"
+                        f"The `save_directory` command requires no additional permissions."
                     )
 
                 elif ctx.command.name == "preview_directory":
                     await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, `Send Messages` and `Manage Messages` permissions.\n"
-                                    f"The `preview_directory` command requires no additional permissions."
+                        f"Every command requires the `Read Text Channels/Messages`, "
+                        f"`Send Messages` and `Manage Messages` permissions.\n"
+                        f"The `preview_directory` command requires no additional permissions."
                     )
 
                 return
