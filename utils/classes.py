@@ -232,6 +232,12 @@ class Bot(DiscordBot):
 
         return dbl
 
+    async def chdir(self, directory: str):
+        if exists(directory):
+            self.cwd = directory
+        else:
+            raise FileNotFoundError("Directory not found")
+
     async def logout(self):
         hour = str(datetime.now().hour)
         minute = str(datetime.now().minute)
