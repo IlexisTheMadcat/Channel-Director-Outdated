@@ -13,6 +13,7 @@ from discord.utils import oauth_url
 
 # Local
 from utils.classes import Bot
+from utils.replit_hosting import start_server
 
 print("...\n\n#-------------------------------#")
 
@@ -145,4 +146,5 @@ if __name__ == "__main__":
             print("Last DBL login failed or unknown.")
 
     print("Logging in with token.")
+    start_server()
     bot.run()
