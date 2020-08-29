@@ -364,6 +364,7 @@ class Commands(Cog):
         if ctx.guild.id in self.bot.LoadingUpdate:
             await ctx.send("Wait a second, you impatient being!\n`The directory is being updated at the moment.`",
                            delete_after=5)
+            ctx.command.reset_cooldown(ctx)
             return
         else:
             with loading(self.bot, ctx.guild.id):
@@ -476,11 +477,12 @@ class Commands(Cog):
                         category = self.bot.get_channel(categoryid)
                     except NotFound:
                         await ctx.send("No category with that ID exists.")
+                        ctx.command.reset_cooldown(ctx)
                     else:
                         if categoryid not in [guild.id for guild in ctx.guild.channels]:
                             await ctx.send(
                                 "That category does exist, but it isn't in your server. Why would I let you do that?")
-
+                            ctx.command.reset_cooldown(ctx)
                             return
 
                     msg = await ctx.send("Are you sure?\n"

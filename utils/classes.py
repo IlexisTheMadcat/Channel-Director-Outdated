@@ -171,7 +171,7 @@ class Bot(DiscordBot):
         self.LoadingUpdate = []                          # Servers (IDs) currently updating the respective directory
         self.using_gui = {}                              # Data about who is using the GUI
         self.pause_reaction_listening = []               # Servers to pause reactions for. Required for the GUI to work as intended.
-        self.text_status = kwargs.get("command_prefix")  # The status the bot should show.
+        self.text_status = f"{kwargs.get('command_prefix')}help"  # Change first half of text status
         self.waiting = List[int]                         # List of users (IDs) that are waiting for a response from the developer.
         self.cwd = getcwd()
 

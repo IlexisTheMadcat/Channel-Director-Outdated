@@ -31,7 +31,7 @@ class Webserver(Cog):
 
         @routes.get('/')
         async def welcome(request):
-            return html("home.html", request, context={})
+            return html("200.html", request, context={})
 
         @routes.post('/send')
         async def send_message(request):
