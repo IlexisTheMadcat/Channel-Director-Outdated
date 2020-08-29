@@ -31,7 +31,7 @@ class Events(Cog):
 
     @Cog.listener()
     async def on_guild_channel_delete(self, channel):
-        if channel.guild.id not in self.bot.univ.LoadingUpdate and channel.guild.id in self.bot.user_data["Directories"]:
+        if channel.guild.id not in self.bot.LoadingUpdate and channel.guild.id in self.bot.user_data["Directories"]:
             with lucm(self.bot, channel.guild.id):
                 await sleep(5)
                 catch_id = deepcopy(self.bot.user_data["Directories"][channel.guild.id]["categoryID"])
@@ -112,9 +112,9 @@ class Events(Cog):
                             return
                         elif user.status == Status.idle:
                             conf = await msg.channel.send(":orange_circle: The developer is currently idle, "
-                                                         "are you sure you want to send?\n"
-                                                         "Sending `Yes` will send the message, but you *may* not get a response.\n"
-                                                         "(`Yes`, `No`)")
+                                                          "are you sure you want to send?\n"
+                                                          "Sending `Yes` will send the message, but you *may* not get a response.\n"
+                                                          "(`Yes`, `No`)")
 
                             def check(m):
                                 return m.content.lower() in ["yes", "no"]
@@ -181,8 +181,8 @@ class Events(Cog):
                                 self.bot.thread_active = True
                                 pass
 
-                        def check(message):
-                            return message.author == user and message.channel == dm.channel
+                        def check(mmessage):
+                            return mmessage.author == user and mmessage.channel == dm.channel
                         while True:
 
                             try:
@@ -270,15 +270,15 @@ class Events(Cog):
                 perms = user.permissions_in(reaction.message.channel)
 
                 # Check if the GUI is already in use, one at a time
-                if reaction.message.guild.id in self.bot.univ.using_gui:
-                    if self.bot.univ.using_gui[reaction.message.guild.id] == user.id:
+                if reaction.message.guild.id in self.bot.using_gui:
+                    if self.bot.using_gui[reaction.message.guild.id] == user.id:
                         await reaction.message.channel.send(
                             f"**{user}**, please answer the prompt first!",
                             delete_after=5
                         )
                         return
                     else:
-                        user_inuse = self.bot.get_user(self.bot.univ.using_gui[reaction.message.guild.id])
+                        user_inuse = self.bot.get_user(self.bot.using_gui[reaction.message.guild.id])
                         await reaction.message.channel.send(
                             f"{user.mention}, **{user_inuse}** is currently using the GUI.",
                             delete_after=5
@@ -326,19 +326,19 @@ class Events(Cog):
                             rreaction.message == reaction.message and \
                             uuser == user
 
-                    self.bot.univ.pause_reaction_listening.append(reaction.message.guild.id)
+                    self.bot.pause_reaction_listening.append(reaction.message.guild.id)
                     # Pause listening
                     try:
                         reaction, user = await self.bot.wait_for("reaction_add", timeout=15, check=check_react)
                     except TimeoutError:
-                        self.bot.univ.pause_reaction_listening.remove(reaction.message.guild.id)
+                        self.bot.pause_reaction_listening.remove(reaction.message.guild.id)
                         await reaction.message.clear_reactions()
                         await info.edit(content=f":x: **{user}** timed out.", delete_after=5)
                         await reaction.message.add_reaction("📝")
                         await reaction.message.add_reaction("🔄")
 
                     else:
-                        self.bot.univ.pause_reaction_listening.remove(reaction.message.guild.id)
+                        self.bot.pause_reaction_listening.remove(reaction.message.guild.id)
                         await reaction.message.clear_reactions()
                         await info.delete()
 
@@ -1469,15 +1469,15 @@ class Events(Cog):
                                         "If you would, please remove your reaction and keep the channel clean...")
                         return
 
-                    if ctx.guild.id in self.bot.univ.using_gui:
-                        if self.bot.univ.using_gui[ctx.guild.id] == user.id:
+                    if ctx.guild.id in self.bot.using_gui:
+                        if self.bot.using_gui[ctx.guild.id] == user.id:
                             await ctx.channel.send(
                                 f"**{user}**, please answer the prompt first!",
                                 delete_after=5
                             )
                             return
                         else:
-                            user_inuse = self.bot.get_user(self.bot.univ.using_gui[ctx.guild.id])
+                            user_inuse = self.bot.get_user(self.bot.using_gui[ctx.guild.id])
                             await ctx.channel.send(
                                 f"{user.mention}, **{user_inuse}** is currently using the GUI.",
                                 delete_after=5

@@ -22,7 +22,7 @@ from discord.user import User
 from discord.utils import find, get
 
 # Local
-from utils.fileinterface import PickleInterface
+from utils.fileinterface import PickleInterface as PI
 
 
 class Paginator:
@@ -162,39 +162,24 @@ class GlobalTextChannelConverter(IDConverter):
         return result
 
 
-class Globals:
-    def __init__(self):
-
-        if exists(f"{self.cwd}/Serialized/data.pkl"):
-            open(f"{self.cwd}/Serialized/data.pkl").close()
-
-        with open(f"{self.cwd}/Serialized/data.pkl", "rb") as f:
-            try:
-                data = Unpickler(f).load()
-                self.Directories = data["Directories"]
-                print("#-------------------------------#\n"
-                      "[] Loaded data.pkl.\n"
-                      "#-------------------------------#\n")
-            except Exception as e:
-                self.Directories = {"guildID": {"catagoryID": 0, "channelID": 0, "messageID": 0, "tree": {}}}
-                print("[Data Reset] Unpickling Error:", e)
-
-
 class Bot(DiscordBot):
 
     def __init__(self, *args, **kwargs):
-        self.inactive = 0
-        self.LoadingUpdate = []
-        self.using_gui = {}
-        self.pause_reaction_listening = []
+
+        # Namespace variables
+        self.inactive = 0                                # Number of minutes the bot has been inactive
+        self.LoadingUpdate = []                          # Servers (IDs) currently updating the respective directory
+        self.using_gui = {}                              # Data about who is using the GUI
+        self.pause_reaction_listening = []               # Servers to pause reactions for. Required for the GUI to work as intended.
+        self.text_status = kwargs.get("command_prefix")  # The status the bot should show.
+        self.waiting = List[int]                         # List of users (IDs) that are waiting for a response from the developer.
         self.cwd = getcwd()
 
-        # Capture extra meta from init for cogs, former `global`s
-        self.auto_pull = kwargs.pop("auto_pull", True)
-        self.debug_mode = kwargs.pop("debug_mode", False)
+        self.config = PI("Serialized/bot_config.pkl", create_file=True)
+        self.user_data = PI("Serialized/data.pkl", create_file=True)
 
         # Attribute for accessing tokens from file
-        self.auth = PickleInterface(f"{self.cwd}/Serialized/tokens.pkl")
+        self.auth = PI(f"{self.cwd}/Serialized/tokens.pkl")
 
         # Attribute will be filled in `on_ready`
         self.owner: User = kwargs.pop("owner", None)
@@ -205,8 +190,6 @@ class Bot(DiscordBot):
         super().run(self.auth["MWS_BOT_TOKEN"], *args, **kwargs)
 
     def connect_dbl(self, autopost: bool = True):
-        print("#------------ DBL --------------#\n"
-              "| Connecting DBL with token.")
         try:
             if not self.auth["MWS_DBL_TOKEN"]:
                 raise DBLException
@@ -247,7 +230,7 @@ class Bot(DiscordBot):
         with open(f"{self.cwd}/Serialized/data.pkl", "wb") as f:
             try:
                 data = {
-                    "Directories": self.univ.Directories
+                    "Directories": self.user_data["Directories"]
                 }
 
                 dump(data, f)
@@ -255,9 +238,6 @@ class Bot(DiscordBot):
                 print(f"[{time} || Unable to save] Pickle dumping Error:", e)
 
         print(f"[CDR: {time}] Saved data and logging out...")
-
-        for x_loop in self.univ.Loops:
-            x_loop.cancel()
 
         with suppress(RuntimeError, RuntimeWarning):
             await super().logout()
@@ -268,7 +248,7 @@ class Bot(DiscordBot):
         """Replaces all channel IDs `tuple` with `None`"""
 
         await self.update_directory(ctx=ctx, note=f"Updated to create download file.")
-        directory = deepcopy(self.univ.Directories[ctx.guild.id]["tree"])
+        directory = deepcopy(self.user_data["Directories"][ctx.guild.id]["tree"])
 
         def recurse_convert_to_readable(d: dict):
             for key, val in d.items():
@@ -289,10 +269,10 @@ class Bot(DiscordBot):
         # 'ctx' must meet the requirements for getting .guild.
         # 'directory' is the directory from the unpickled file attached.
 
-        cat = self.get_channel(self.univ.Directories[ctx.guild.id]["categoryID"])
-        directory_ch = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
+        cat = self.get_channel(self.user_data["Directories"][ctx.guild.id]["categoryID"])
+        directory_ch = self.get_channel(self.user_data["Directories"][ctx.guild.id]["channelID"])
 
-        async def recurse_convert_to_directory(d: dict, univ: Globals):
+        async def recurse_convert_to_directory(d: dict):
             """Recursively create new channels from directory dict"""
 
             for key, val in d.items():
@@ -306,12 +286,12 @@ class Bot(DiscordBot):
                     await sleep(0.2)
 
                 elif isinstance(val, dict):
-                    await recurse_convert_to_directory(val, univ)
+                    await recurse_convert_to_directory(val)
 
                 else:
                     raise TypeError("Invalid dictionary passed.")
 
-        await recurse_convert_to_directory(directory["root"], self.univ)
+        await recurse_convert_to_directory(directory["root"])
         return directory
 
     def recurse_read(
@@ -399,17 +379,17 @@ class Bot(DiscordBot):
 
     async def update_directory(self, ctx, note="..."):
         """Update the directory associated with a guild"""
-        if ctx.guild.id not in self.univ.Directories:
+        if ctx.guild.id not in self.user_data["Directories"]:
             return
 
         # ctx must meet the requirements for accessing .guild and a Messageable
 
-        directory_cat = self.get_channel(self.univ.Directories[ctx.guild.id]["categoryID"])
-        directory_ch = self.get_channel(self.univ.Directories[ctx.guild.id]["channelID"])
+        directory_cat = self.get_channel(self.user_data["Directories"][ctx.guild.id]["categoryID"])
+        directory_ch = self.get_channel(self.user_data["Directories"][ctx.guild.id]["channelID"])
 
         if not directory_cat:
             directory_cat = await ctx.guild.create_category_channel(name="Directory Archive")
-            self.univ.Directories[ctx.guild.id]["categoryID"] = directory_cat.id
+            self.user_data["Directories"][ctx.guild.id]["categoryID"] = directory_cat.id
 
         if not directory_ch:
             directory_ch = await directory_cat.create_text_channel(
@@ -417,24 +397,24 @@ class Bot(DiscordBot):
                 topic="Managers: Leave this channel on top for easy access. "
                       "Feel free to move or rename it."
             )
-            self.univ.Directories[ctx.guild.id]["channelID"] = directory_ch.id
+            self.user_data["Directories"][ctx.guild.id]["channelID"] = directory_ch.id
         else:
             await directory_ch.edit(category=directory_cat)
 
         try:
-            directory_msg = await directory_ch.fetch_message(self.univ.Directories[ctx.guild.id]["messageID"])
+            directory_msg = await directory_ch.fetch_message(self.user_data["Directories"][ctx.guild.id]["messageID"])
         except NotFound:
             pass
         else:
             await directory_msg.delete()
 
         directory_msg = await directory_ch.send("Updating...")
-        self.univ.Directories[ctx.guild.id]["messageID"] = directory_msg.id
+        self.user_data["Directories"][ctx.guild.id]["messageID"] = directory_msg.id
         async with directory_ch.typing():
             await directory_msg.add_reaction("📝")
             await directory_msg.add_reaction("🔄")
 
-            if not list(self.univ.Directories[ctx.guild.id]["tree"]["root"].items()):
+            if not list(self.user_data["Directories"][ctx.guild.id]["tree"]["root"].items()):
                 await sleep(2)
                 await directory_msg.edit(
                     content="This channel will have a directory under it when "
@@ -451,14 +431,14 @@ class Bot(DiscordBot):
                 while True:
                     message_lines = list()
 
-                    result = self.recurse_read(self.univ.Directories[ctx.guild.id]["tree"]["root"], message_lines)
+                    result = self.recurse_read(self.user_data["Directories"][ctx.guild.id]["tree"]["root"], message_lines)
 
                     if isinstance(result, dict):
-                        self.univ.Directories[ctx.guild.id]["tree"]["root"] = result
+                        self.user_data["Directories"][ctx.guild.id]["tree"]["root"] = result
                         continue
 
                     else:
-                        if not list(self.univ.Directories[ctx.guild.id]["tree"]["root"].items()):
+                        if not list(self.user_data["Directories"][ctx.guild.id]["tree"]["root"].items()):
                             await directory_msg.edit(
                                 content="This channel will have a directory under it when you create "
                                         "a channel using the special command that I provide to you.\n"

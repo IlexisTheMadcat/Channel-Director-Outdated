@@ -234,15 +234,17 @@ class Commands(Cog):
                                     dmessage = await directory.send("Finishing setup...")
 
                                     self.bot.user_data["Directories"].update(
-                                        {ctx.guild.id: {
-                                            "categoryID": cat.id,
-                                            "channelID": directory.id,
-                                            "messageID": dmessage.id,
-                                            "tree": {
-                                               "root": {}
+                                        {
+                                            ctx.guild.id: {
+                                                "categoryID": cat.id,
+                                                "channelID": directory.id,
+                                                "messageID": dmessage.id,
+                                                "tree": {
+                                                   "root": {}
+                                                }
                                             }
                                         }
-                                    })
+                                    )
 
                                     await self.bot.update_directory(ctx, note="Finished setup.")
                                     await msg.edit(content=f"Finished setup. "
