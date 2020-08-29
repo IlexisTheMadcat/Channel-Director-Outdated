@@ -6,9 +6,9 @@ from contextlib import suppress
 from copy import deepcopy
 
 # Site
-from discord import Reaction, Member
+from discord import Reaction, Member, Message, Status, Embed
 from discord.channel import CategoryChannel
-from discord.errors import Forbidden
+from discord.errors import Forbidden, HTTPException
 from discord.ext.commands.cog import Cog
 from discord.ext.commands.context import Context
 from discord.ext.commands.errors import (
@@ -31,10 +31,10 @@ class Events(Cog):
 
     @Cog.listener()
     async def on_guild_channel_delete(self, channel):
-        if channel.guild.id not in self.bot.univ.LoadingUpdate and channel.guild.id in self.bot.univ.Directories:
+        if channel.guild.id not in self.bot.univ.LoadingUpdate and channel.guild.id in self.bot.user_data["Directories"]:
             with lucm(self.bot, channel.guild.id):
                 await sleep(5)
-                catch_id = deepcopy(self.bot.univ.Directories[channel.guild.id]["categoryID"])
+                catch_id = deepcopy(self.bot.user_data["Directories"][channel.guild.id]["categoryID"])
                 await self.bot.update_directory(channel,
                                                 note="Updated automatically following channel deletion by user.")
                 if isinstance(channel, CategoryChannel) and channel.id == catch_id:
@@ -43,7 +43,7 @@ class Events(Cog):
                             if isinstance(val, tuple):
                                 ch = self.bot.get_channel(val[0])
                                 dcategory = self.bot.get_channel(
-                                    self.bot.univ.Directories[channel.guild.id]["categoryID"])
+                                    self.bot.user_data["Directories"][channel.guild.id]["categoryID"])
                                 if ch and not val[1]:
                                     await ch.edit(category=dcategory)
                             elif isinstance(val, dict):
@@ -51,42 +51,206 @@ class Events(Cog):
                             else:
                                 raise ValueError("Invalid directory dictionary passed.")
 
-                    await recurse_move_channels(self.bot.univ.Directories[channel.guild.id]["tree"])
+                    await recurse_move_channels(self.bot.user_data["Directories"][channel.guild.id]["tree"])
 
     @Cog.listener()
-    async def on_message(self, msg):
-        if not msg.guild:
+    async def on_message(self, msg: Message):
+        if msg.author.bot:
             return
 
-        if msg.author.id == self.bot.user.id:
-            return
+        if msg.author.id == 726313554717835284:
+            ids = msg.content.split(";")
+            voter = int(ids[0])
+            voted_for = int(ids[1])
 
+            if voted_for == self.bot.user.id:  # append `or 687427956364279873` for testing instance
+                user = await self.bot.fetch_user(voter)
+                try:
+                    await user.send(
+                        "Thanks for voting! You will now have access to the following commands shortly for 12 hours:\n"
+                        "```\n"
+                        f"{self.bot.command_prefix}add_to_closet\n"
+                        f"{self.bot.command_prefix}remove_from_closet\n"
+                        f"{self.bot.command_prefix}rename_closet_entry\n"
+                        f"{self.bot.command_prefix}see_closet\n"
+                        f"{self.bot.command_prefix}preview_closet_entry\n"
+                        f"```\n"
+                        f"These commands allow you to store favorite vanity avatars "
+                        f"and use them anywhere. You can only hold up to 10.\n"
+                        f"For help on the usage of each command, "
+                        f"enter `{self.bot.command_prefix}help commands <command name>`.")
+
+                except HTTPException or Forbidden:
+                    print(f"[❌] User \"{user}\" voted for \"{self.bot.user}\". DM Failed.")
+                else:
+                    print(f"[] User \"{user}\" voted for \"{self.bot.user}\".")
+
+                return
+
+        # Check if the message is a command. Terminates the event if so, so the command can run.
         verify_command = await self.bot.get_context(msg)
         if verify_command.valid:
-            self.bot.univ.Inactive = 0
+            self.bot.inactive = 0
             return
 
-        if msg.guild.id in self.bot.univ.Directories:
-            if msg.channel.id == self.bot.univ.Directories[msg.guild.id]["channelID"]:
+        # Support can be run through DMs
+        if msg.guild is None:
+            if msg.author.id != self.bot.owner_ids[0]:
+                if msg.content.startswith("> "):
+                    if msg.author.id not in self.bot.config['muted_dms']:
+                        if msg.author.id in self.bot.waiting:
+                            await msg.channel.send(":clock9: Please wait, you already have a question open.\n"
+                                                   "You'll get a response from me soon.")
+
+                            return
+
+                        dev_guild = self.bot.get_guild(699399549218717707)  # Developer's Guild
+                        user = dev_guild.get_member(self.bot.owner_ids[0])
+                        if user.status == Status.dnd:
+                            await msg.channel.send(":red_circle: The developer currently has "
+                                                   "Do Not Disturb on. Please try again later.")
+                            return
+                        elif user.status == Status.idle:
+                            conf = await msg.channel.send(":orange_circle: The developer is currently idle, "
+                                                         "are you sure you want to send?\n"
+                                                         "Sending `Yes` will send the message, but you *may* not get a response.\n"
+                                                         "(`Yes`, `No`)")
+
+                            def check(m):
+                                return m.content.lower() in ["yes", "no"]
+                            try:
+                                message = await self.bot.wait_for("message", timeout=20, check=check)
+                            except TimeoutError:
+                                await conf.edit(":orange_circle: The developer is currently idle, "
+                                                "are you sure you want to send?\n"
+                                                "Sending `Yes` will send the message, but you *may* not get a response.\n"
+                                                "(`Yes`, `No`)")
+                            else:
+                                if message.content == "no":
+                                    return await conf.edit(":orange_circle: The developer is currently idle.\n"
+                                                           "Please try again later.")
+
+                                elif message.content == "yes":
+                                    await conf.delete()
+
+                        status_msg = await msg.channel.send(":clock9: "
+                                                            "I sent your message to the developer.\n"
+                                                            "Please stand by for a response or "
+                                                            "until **this message is edited**...\n")
+
+                        self.bot.waiting.append(msg.author.id)
+
+                        embed = Embed(color=0xff87a3)
+                        embed.title = f"Message from user {msg.author} (ID: {msg.author.id}):"
+                        embed.description = f"{msg.content}\n\n" \
+                                            f"Replying to this DM **within 120 seconds** " \
+                                            f"after accepting **within 10 minutes** " \
+                                            f"will relay the message back to the user."
+
+                        dm = await user.send(content="**PENDING**", embed=embed)
+                        await dm.add_reaction("✅")
+                        await dm.add_reaction("❎")
+
+                        def check(sreaction, suser):
+                            if self.bot.thread_active:
+                                self.bot.loop.create_task(
+                                    reaction.channel.send("There is already an active thread running...\n "
+                                                          "Please finish the **`ACTIVE`** one first."))
+                                return False
+                            else:
+                                return sreaction.message.id == dm.id and \
+                                    str(sreaction.emoji) in ["✅", "❎"] and \
+                                    suser == user
+                        try:
+                            reaction, user = await self.bot.wait_for("reaction_add", timeout=600, check=check)
+                        except TimeoutError:
+                            await dm.edit(content="**TIMED OUT**")
+                            await status_msg.edit(content=":x: "
+                                                          "The developer is unavailable right now. Try again later.")
+                            return
+                        else:
+                            if str(reaction.emoji) == "❎":
+                                await dm.edit(content="**DENIED**")
+                                await status_msg.edit(content=":information_source: The developer denied your message. "
+                                                              "Please make sure you are as detailed as possible.")
+                                return
+                            elif str(reaction.emoji) == "✅":
+                                await dm.edit(content="**ACTIVE**")
+                                await status_msg.edit(content=":information_source: "
+                                                              "The developer is typing a message back...")
+                                self.bot.thread_active = True
+                                pass
+
+                        def check(message):
+                            return message.author == user and message.channel == dm.channel
+                        while True:
+
+                            try:
+                                response = await self.bot.wait_for("message", timeout=120, check=check)
+                            except TimeoutError:
+                                conf = await user.send(":warning: Press the button below to continue typing.")
+                                await conf.add_reaction("🔘")
+
+                                def conf_button(b_reaction, b_user):
+                                    return str(b_reaction.emoji) == "🔘" and b_user == user \
+                                           and b_reaction.message.channel == dm.channel
+
+                                try:
+                                    await self.bot.wait_for("reaction_add", timeout=10, check=conf_button)
+                                except TimeoutError:
+                                    await conf.delete()
+                                    await dm.edit(content="**TIMED OUT**")
+                                    await dm.channel.send("You timed out. "
+                                                          "The user was notified that you are not available right now.")
+
+                                    self.bot.waiting.remove(msg.author.id)
+                                    self.bot.thread_active = False
+                                    await status_msg.edit(content=":information_source: "
+                                                                  "The developer timed out on typing a response. "
+                                                                  "Please ask at a later time.\n"
+                                                                  "You may also join the support server here: "
+                                                                  "https://discord.gg/j2y7jxQ")
+                                    return
+                                else:
+                                    await conf.delete()
+                                    continue
+                            else:
+                                self.bot.waiting.remove(msg.author.id)
+                                self.bot.thread_active = False
+                                await dm.edit(content="**Answered**")
+                                await dm.channel.send(":white_check_mark: Okay, message sent.")
+                                await status_msg.edit(content=":white_check_mark: The developer has responded.")
+                                await msg.channel.send(f":newspaper: Response from the developer:\n{response.content}")
+                                return
+                    else:
+                        await msg.channel.send("You've been muted by the developer, "
+                                               "so you cannot send anything.\n"
+                                               "If you believe you were muted by mistake, "
+                                               "please join the support server:\n"
+                                               "https://discord.gg/j2y7jxQ\n\n"
+                                               "**Note that spamming will get you banned without hesitation.**")
+                        return
+                else:
+                    await msg.channel.send("Please start your message with "
+                                           "\"`> `\" "
+                                           "to ask a question or send compliments.\n"
+                                           "This is the markdown feature to create quotes.",
+                                           delete_after=5)
+                    return
+            return
+
+        if msg.guild.id in self.bot.user_data["Directories"]:
+            if msg.channel.id == self.bot.user_data["Directories"][msg.guild.id]["channelID"]:
                 try:
                     await msg.delete()
                 except Forbidden:
                     pass
 
-        if self.bot.user.mentioned_in(msg):
-            try:
-                if msg.author.id in self.bot.owner_ids:
-                    await msg.add_reaction("💕")
-                else:
-                    await msg.add_reaction("👋")
-            except Forbidden:
-                pass
-
     @Cog.listener()
     async def on_reaction_add(self, reaction: Reaction, user: Member):
-        if reaction.message.guild and reaction.message.guild.id in self.bot.univ.Directories:
-            if reaction.message.id == self.bot.univ.Directories[reaction.message.guild.id]["messageID"]:
-                if reaction.message.guild.id in self.bot.univ.pause_reaction_listening:
+        if reaction.message.guild and reaction.message.guild.id in self.bot.user_data["Directories"]:
+            if reaction.message.id == self.bot.user_data["Directories"][reaction.message.guild.id]["messageID"]:
+                if reaction.message.guild.id in self.bot.pause_reaction_listening:
                     return
 
                 if user == self.bot.user:
@@ -101,7 +265,7 @@ class Events(Cog):
                         return
 
                 # Check permissions for the user and bot
-                dcategory = self.bot.get_channel(self.bot.univ.Directories[reaction.message.guild.id]["categoryID"])
+                dcategory = self.bot.get_channel(self.bot.user_data["Directories"][reaction.message.guild.id]["categoryID"])
                 bot_perms = reaction.message.guild.me.permissions_in(dcategory)
                 perms = user.permissions_in(reaction.message.channel)
 
@@ -227,7 +391,7 @@ class Events(Cog):
 
                                     try:
                                         get_item = recurse_index(
-                                            self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                            self.bot.user_data["Directories"][reaction.message.guild.id]['tree'],
                                             path.content.split("//"))
 
                                         if isinstance(get_item, int):
@@ -271,7 +435,7 @@ class Events(Cog):
                                                                        delete_after=5)
 
                                     get_item = recurse_index(
-                                        self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                        self.bot.user_data["Directories"][reaction.message.guild.id]['tree'],
                                         path.content.split("//"))
 
                                     if isinstance(get_item, dict) and name.content in get_item:
@@ -353,7 +517,7 @@ class Events(Cog):
 
                                     try:
                                         get_item = recurse_index(
-                                            self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                            self.bot.user_data["Directories"][reaction.message.guild.id]['tree'],
                                             path.content.split("//"))
 
                                         if isinstance(get_item, int):
@@ -397,7 +561,7 @@ class Events(Cog):
                                                                        delete_after=5)
 
                                     get_item = recurse_index(
-                                        self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                        self.bot.user_data["Directories"][reaction.message.guild.id]['tree'],
                                         path.content.split("//"))
 
                                     if name.content in get_item:
@@ -487,7 +651,7 @@ class Events(Cog):
 
                                     try:
                                         get_item = recurse_index(
-                                            self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                            self.bot.user_data["Directories"][reaction.message.guild.id]['tree'],
                                             path.content.split("//"))
 
                                         if isinstance(get_item, int):
@@ -531,7 +695,7 @@ class Events(Cog):
                                                                        delete_after=5)
 
                                     get_item = recurse_index(
-                                        self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                        self.bot.user_data["Directories"][reaction.message.guild.id]['tree'],
                                         path.content.split("//"))
 
                                     if isinstance(get_item, dict) and name.content not in get_item:
@@ -631,7 +795,7 @@ class Events(Cog):
 
                                     try:
                                         get_item = recurse_index(
-                                            self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                            self.bot.user_data["Directories"][reaction.message.guild.id]['tree'],
                                             path.content.split("//"))
 
                                         if isinstance(get_item, int):
@@ -677,7 +841,7 @@ class Events(Cog):
                                                                        delete_after=5)
 
                                     get_item = recurse_index(
-                                        self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                        self.bot.user_data["Directories"][reaction.message.guild.id]['tree'],
                                         path.content.split("//"))
 
                                     if name.content not in get_item:
@@ -732,7 +896,7 @@ class Events(Cog):
                                                                        delete_after=5)
 
                                     get_item = recurse_index(
-                                        self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                        self.bot.user_data["Directories"][reaction.message.guild.id]['tree'],
                                         path.content.split("//"))
 
                                     if rename.content in get_item:
@@ -819,7 +983,7 @@ class Events(Cog):
 
                                     try:
                                         get_item = recurse_index(
-                                            self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                            self.bot.user_data["Directories"][reaction.message.guild.id]['tree'],
                                             path.content.split("//"))
 
                                         if isinstance(get_item, int):
@@ -865,7 +1029,7 @@ class Events(Cog):
                                                                        delete_after=5)
 
                                     get_item = recurse_index(
-                                        self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                        self.bot.user_data["Directories"][reaction.message.guild.id]['tree'],
                                         path.content.split("//"))
 
                                     if name.content not in get_item:
@@ -921,7 +1085,7 @@ class Events(Cog):
 
                                     try:
                                         get_new_item = recurse_index(
-                                            self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                            self.bot.user_data["Directories"][reaction.message.guild.id]['tree'],
                                             new_path.content.split("//"))
 
                                         if isinstance(get_new_item, int):
@@ -1023,7 +1187,7 @@ class Events(Cog):
                                                     f"Type \"+Cancel\" to cancel.")
                                         continue
 
-                                    tree = deepcopy(self.bot.univ.Directories[reaction.message.guild.id]["tree"])
+                                    tree = deepcopy(self.bot.user_data["Directories"][reaction.message.guild.id]["tree"])
                                     while True:
                                         ids = self.bot.get_all_ids(tree, c_ids=list())
                                         if isinstance(ids, dict):
@@ -1074,7 +1238,7 @@ class Events(Cog):
 
                                     try:
                                         recurse_index(
-                                            self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                            self.bot.user_data["Directories"][reaction.message.guild.id]['tree'],
                                             path.content.split("//"))
                                     except KeyError as e:
                                         await confirmation.edit(
@@ -1116,7 +1280,7 @@ class Events(Cog):
                                                                        delete_after=5)
 
                                     get_item = recurse_index(
-                                        self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                        self.bot.user_data["Directories"][reaction.message.guild.id]['tree'],
                                         path.content.split("//"))
 
                                     if name.content in get_item:
@@ -1190,7 +1354,7 @@ class Events(Cog):
 
                                     try:
                                         get_item = recurse_index(
-                                            self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                            self.bot.user_data["Directories"][reaction.message.guild.id]['tree'],
                                             path.content.split("//"))
 
                                         if isinstance(get_item, int):
@@ -1234,7 +1398,7 @@ class Events(Cog):
                                                                        delete_after=5)
 
                                     get_item = recurse_index(
-                                        self.bot.univ.Directories[reaction.message.guild.id]['tree'],
+                                        self.bot.user_data["Directories"][reaction.message.guild.id]['tree'],
                                         path.content.split("//"))
 
                                     if name.content not in get_item:
@@ -1285,8 +1449,8 @@ class Events(Cog):
         if user == self.bot.user:
             return
 
-        if ctx.guild and ctx.guild.id in self.bot.univ.Directories:
-            if ctx.message.id == self.bot.univ.Directories[ctx.guild.id]["messageID"]:
+        if ctx.guild and ctx.guild.id in self.bot.user_data["Directories"]:
+            if ctx.message.id == self.bot.user_data["Directories"][ctx.guild.id]["messageID"]:
                 if str(payload.emoji) == "🔄" and payload.user_id != self.bot.user.id:
 
                     # Check permissions for the user and bot
@@ -1297,7 +1461,7 @@ class Events(Cog):
                             delete_after=5)
                         return
 
-                    dcategory = self.bot.get_channel(self.bot.univ.Directories[ctx.guild.id]["categoryID"])
+                    dcategory = self.bot.get_channel(self.bot.user_data["Directories"][ctx.guild.id]["categoryID"])
                     bot_perms = ctx.guild.me.permissions_in(dcategory)
 
                     if not bot_perms.manage_channels:
@@ -1329,7 +1493,10 @@ class Events(Cog):
         with suppress(Forbidden):
             await ctx.message.add_reaction("❌")
 
-        if not self.bot.debug_mode:
+        if not isinstance(error, CommandOnCooldown):
+            ctx.command.reset_cooldown(ctx)
+
+        if not self.bot.config["debug_mode"]:
             msg = ctx.message
             if isinstance(error, BotMissingPermissions):
                 if ctx.command.name == "setup_directory":

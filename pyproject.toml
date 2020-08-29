@@ -9,6 +9,8 @@ python = "^3.8"
 dblpy = "^0.3.4"
 discord = "^1.0.1"
 flask = "^1.1.2"
+jinja2 = "^2.11.2"
+aiohttp-jinja2 = "^1.2.0"
 
 [tool.poetry.dev-dependencies]
 

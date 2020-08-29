@@ -1,7 +1,6 @@
 # Lib
-from pickle import Unpickler
-from os import getcwd
-from os.path import join, exists
+import os
+from copy import deepcopy
 from random import choice
 
 # Site
@@ -13,44 +12,32 @@ from discord.utils import oauth_url
 
 # Local
 from utils.classes import Bot
-from utils.replit_hosting import start_server
+from utils.fileinterface import PickleInterface as PI
 
-print("...\n\n#-------------------------------#")
 
-print("Attempting to open bot_config.pkl...", end="\r")
+CONFIG_DEFAULTS = {
+    "debug_mode": False,       # Print exceptions to stdout.  # TODO: Examine `on_error` to print all
+    "auto_pull": False,        # Auto pulls github updates every minute and reloads all loaded cogs.
+    "muted_dms": list(),       # List of user IDs to block support DMs from. Y'know, in case of the abusers.
+    "error_log_channel": None  # The channel ID to print error exceptions to.
+}
 
-if not exists(join(getcwd(), "Serialized", "bot_config.pkl")):
-    open(join(getcwd(), "Serialized", "bot_config.pkl"), "wb").close()
+DATA_DEFAULTS = {
+    # The Dict object to hold all directory data.
+    "Directories": {"guildID": {"catagoryID": 0, "channelID": 0, "messageID": 0, "tree": {}}}  
+}
 
-with open(join(getcwd(), "Serialized", "bot_config.pkl"), "rb") as f:
-    try:
-        config_data = Unpickler(f).load()
-    except Exception as e:
-        print(f'[Using defaults] Unpickling error: {e}{" "*30}')
-        debug_mode = False
-        auto_pull = True
-        prefix = "cdr:"
-    else:
-        try:
-            debug_mode = config_data["debug_mode"]
-            auto_pull = config_data["auto_pull"]
-            prefix = config_data["prefix"]
-            print(f"Loaded bot_config.pkl{' '*20}")
-        except KeyError:
-            print(f'[Using defaults] bot_config.pkl file improperly formatted.{" "*35}')
-            # print excess spaces to fully overwrite the '\r' above
+INIT_EXTENSIONS = [
+    "admin",
+    "background",
+    "directory_management",
+    "events",
+    "help",
+    "repl", 
+    "web"
+]
 
-            debug_mode = False
-            # Print exceptions to stdout.
-            # Some errors will not be printed for some reason, such as NameError outside of commands.
-
-            auto_pull = True
-            # Auto pulls github updates every minute and reloads all loaded cogs.
-
-            prefix = "cdr:"  # Bot Prefix
-
-print("#-------------------------------#\n")
-loading_choices = [  # because why not
+LOADING_CHOICES = [  # because why not
     "Loading the 'non-existent' one...",
     '"Subaru!"',
     "Booting up the faithful mind...",
@@ -65,52 +52,82 @@ loading_choices = [  # because why not
     "Requesting the one they call Rem... Who is she by the way?"
 ]
 
-INIT_EXTENSIONS = [
-    "admin",
-    "background",
-    "directory_management",
-    "events",
-    "help",
-]
 
-# Extension "repl" must be loaded manually
-# as it is not automatically available
-# because it is not often needed.
+config_data = PI("Serialized/bot_config.pkl", create_file=True)
+user_data = PI("Serialized/data.pkl", create_file=True)
 
+
+# Check the bot config file
+for key in CONFIG_DEFAULTS:
+    if key not in config_data:
+        config_data[key] = CONFIG_DEFAULTS[key]
+        print(f"[MISSING VALUE] Config '{key}' missing. "
+              f"Inserted default '{CONFIG_DEFAULTS[key]}'")
+
+found_data = deepcopy(config_data)  # Duplicate to avoid RuntimeError exception
+for key in found_data:
+    if key not in CONFIG_DEFAULTS:
+        config_data.pop(key)  # Remove redundant data
+        print(f"[REDUNDANCY] Invalid config \'{key}\' found. "
+              f"Removed key from file.")
+
+del found_data  # Remove variable from namespace
+
+
+# Check the user data file
+for key in DATA_DEFAULTS:
+    if key not in user_data:
+        user_data[key] = DATA_DEFAULTS[key]
+        print(f"[MISSING VALUE] Config '{key}' missing. "
+              f"Inserted default '{DATA_DEFAULTS[key]}'")
+
+found_data = deepcopy(config_data)  # Duplicate to avoid RuntimeError exception
+for key in found_data:
+    if key not in CONFIG_DEFAULTS:
+        config_data.pop(key)  # Remove redundant data
+        print(f"[REDUNDANCY] Invalid data \'{key}\' found. "
+              f"Removed key from file.")
+
+del found_data  # Remove variable from namespace
+
+print("[] Configurations loaded from Serialized/bot_config.pkl")
+
+
+# Begin initialization
 bot = Bot(
-    description="Create a new channel system for your server.",
-    owner_ids=[331551368789622784, 125435062127820800],
-    activity=Activity(type=ActivityType.watching, name=f"Just woke up."),
+    description="Change your profile picture for a specific server.",
+    owner_ids=[331551368789622784, 125435062127820800],  # DocterBotnikM500, SirThane
+    activity=Activity(type=ActivityType.playing, name=f"the \"wake up\" game."),
     status=Status.idle,
-    # Configurable via :>bot
-    command_prefix=prefix,
-    debug_mode=debug_mode,
-    auto_pull=auto_pull
+    command_prefix="cdr:" if os.name == "posix" else "[rem]:",
+
+    # Configurable via [p]bot
+    config=config_data
 )
 
+# To be replaced by custom help command
+# TODO: Move to `help.py` when done
 bot.remove_command("help")
 
-print("#-------------------------------#")
-print(f"Running in: {bot.cwd}")
-print(f"Discord API version: {__version__}")
-
-print("#-------------------------------#\n")
+print(f"[BOT INIT] Running in: {bot.cwd}\n"
+      f"[BOT INIT] Discord API version: {__version__}")
 
 
 @bot.event
 async def on_ready():
+    await bot.connect_dbl(autopost=True)
+
     app_info = await bot.application_info()
     bot.owner = bot.get_user(app_info.owner.id)
 
     permissions = Permissions()
     permissions.update(
-        manage_channels=True,
-        manage_roles=True,
-        manage_messages=True,
-        read_messages=True,
         send_messages=True,
-        attach_files=True,
-        add_reactions=True
+        embed_links=True,
+        manage_messages=True,
+        manage_webhooks=True,
+        add_reactions=True,
+        attach_files=True
     )
 
     print(f"\n"
@@ -119,32 +136,26 @@ async def on_ready():
           f"#-------------------------------#")
 
     for cog in INIT_EXTENSIONS:
-        print(f"| Loading initial cog {cog}")
         try:
             bot.load_extension(f"cogs.{cog}")
-        except Exception as err:
-            print(f"| Failed to load extension {cog}\n|   {type(err).__name__}: {err}", end="\n")
+            print(f"| Loaded initial cog {cog}")
+        except Exception as e:
+            print(f"| Failed to load extension {cog}\n|   {type(e).__name__}: {e}")
 
     print(f"#-------------------------------#\n"
           f"| Successfully logged in.\n"
           f"#-------------------------------#\n"
-          f"| Usern:     {bot.user}\n"
+          f"| User:      {bot.user}\n"
           f"| User ID:   {bot.user.id}\n"
           f"| Owner:     {bot.owner}\n"
           f"| Guilds:    {len(bot.guilds)}\n"
           f"| Users:     {len(list(bot.get_all_members()))}\n"
           f"| OAuth URL: {oauth_url(app_info.id, permissions)}\n"
           f"#------------------------------#\n"
-          f"{choice(loading_choices)}\n"
+          f"| {choice(LOADING_CHOICES)}\n"
           f"#-------------------------------#\n")
 
 
 if __name__ == "__main__":
-
-    if not bot.auth["MWS_DBL_SUCCESS"]:
-        if bot.auth["MWS_DBL_TOKEN"]:
-            print("Last DBL login failed or unknown.")
-
-    print("Logging in with token.")
-    start_server()
+    
     bot.run()

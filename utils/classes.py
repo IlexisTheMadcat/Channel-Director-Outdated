@@ -164,13 +164,6 @@ class GlobalTextChannelConverter(IDConverter):
 
 class Globals:
     def __init__(self):
-        self.Inactive = 0
-        self.Loops = []
-        self.LoadingUpdate = []
-        self.using_gui = {}
-        self.pause_reaction_listening = []
-        self.Directories = {"guildID": {"catagoryID": 0, "channelID": 0, "messageID": 0, "tree": {}}}
-        self.cwd = getcwd()
 
         if exists(f"{self.cwd}/Serialized/data.pkl"):
             open(f"{self.cwd}/Serialized/data.pkl").close()
@@ -190,10 +183,11 @@ class Globals:
 class Bot(DiscordBot):
 
     def __init__(self, *args, **kwargs):
-
-        # Backwards patch Globals class for availability to cogs
-        self.univ = Globals()
-        self.cwd = self.univ.cwd
+        self.inactive = 0
+        self.LoadingUpdate = []
+        self.using_gui = {}
+        self.pause_reaction_listening = []
+        self.cwd = getcwd()
 
         # Capture extra meta from init for cogs, former `global`s
         self.auto_pull = kwargs.pop("auto_pull", True)

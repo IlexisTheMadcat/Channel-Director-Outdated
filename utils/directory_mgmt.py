@@ -24,11 +24,11 @@ def loadingupdate(bot, g_id: int):
     :param g_id: The Guild.id to append to the list
     :return: None
     """
-    bot.univ.LoadingUpdate.append(g_id)
+    bot.LoadingUpdate.append(g_id)
     try:
         yield None
     finally:
-        bot.univ.LoadingUpdate.remove(g_id)
+        bot.LoadingUpdate.remove(g_id)
 
 
 @contextmanager
@@ -43,8 +43,8 @@ def usinggui(bot, g_id: int, u_id: int):
     :return: None
     """
 
-    bot.univ.using_gui.update({g_id: u_id})
+    bot.using_gui.update({g_id: u_id})
     try:
         yield None
     finally:
-        bot.univ.using_gui.pop(g_id)
+        bot.using_gui.pop(g_id)

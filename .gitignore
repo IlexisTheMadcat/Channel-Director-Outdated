@@ -2,6 +2,6 @@
 *__pycache__*
 *.idea*
 *.bat
-.replit
-*start.json*
+*.replit*
+*start.bat*
 *README.md*
