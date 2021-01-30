@@ -104,7 +104,7 @@ Create a custom directory to better organize your channels.
 This bot was created by:
 {owners}
 
-Support Server invite: https://discord.gg/j2y7jxQ
+Support Server invite: https://discord.gg/DJ4wdsRYy2
 Warning: Support server may contain swearing in open channels.
 *Consider DMing the developer instead for questions/information.
 
@@ -180,7 +180,7 @@ Deconstruct the custom directory system added to your server, provided by me.
 **--** IMPORTANT! Use this command especially if you have a lot of channels under the category that I created.
 """
 
-            elif subsection.lower() == "new_channel":
+            elif subsection.lower() == "create_channel":
                 em.description = f"""
 **CREATE_CHANNEL**; Aliases: "new_ch"
 `{BOT_PREFIX}create_channel <directory> <name>`
@@ -191,7 +191,7 @@ Create a new channel under `directory` with the name `name`.
 **----** `{BOT_PREFIX}update`
 """
 
-            elif subsection.lower() == "create_channel":
+            elif subsection.lower() == "create_category":
                 em.description = f"""
 **CREATE_CATEGORY**; Aliases: "new_cat"
 `{BOT_PREFIX}create_category <directory> <name>`

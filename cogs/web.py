@@ -1,12 +1,11 @@
 # Lib
 import os
-import jinja2
 from aiohttp import web
+import jinja2
 from aiohttp_jinja2 import (
     setup as jinja_setup,
     render_template as html
 )
-from inspect import isawaitable
 
 # Site
 from discord.ext import tasks
@@ -27,70 +26,12 @@ class Webserver(Cog):
     def __init__(self, bot):
         self.bot = bot
         self.web_server.start()
-        self.ret = None
 
         @routes.get('/')
         async def welcome(request):
             return html("200.html", request, context={})
 
-        @routes.post('/send')
-        async def send_message(request):
-            data = await request.post()
-            print("[IN] Sending Message...")
-            channel = await self.bot.fetch_channel(self.bot.listening_channel)
-            if not channel:
-                print("[OUT] Listening channel not found!")
-            else:
-                await channel.send(dict(data)["text"])
-            
-            raise web.HTTPFound("/")
-
-        @routes.post('/evaluate')
-        async def evaluate_code(request):
-            data = await request.post()
-            print("[IN] Running:", dict(data)["evaluation"])
-            try:
-                self.ret = eval(dict(data)["evaluation"])
-            except Exception as e:
-                print(f"[OUT] Raised {type(e).__name__}: {e}")
-                raise web.HTTPFound("/")
-
-            if isawaitable(self.ret):
-                self.ret = await self.ret
-            
-            print("[OUT] Returned Result:", self.ret)
-            raise web.HTTPFound("/")
-        
-        @routes.post('/load_image')
-        async def evaluate_code(request):
-            data = await request.post()
-            return html("image.html", request, context={"image": dict(data)["url"]})
-
-        @routes.post("/channel")
-        async def change_channel(request):
-            data = await request.post()
-            self.bot.listening_channel = int(dict(data)["channel_change"])
-            channel = await self.bot.fetch_channel(self.bot.listening_channel)
-
-            messages = list()
-            if channel is not None:
-                async for i in channel.history(limit=50):
-                    messages.append(i)
-            else:
-                print("[GET] Channel not found!")
-            
-            messages.reverse()
-            for i in messages:
-                print(f"[GET] ----- Message ----- |\n[] {i.author.display_name} ({i.author})\n{i.content if i.content != '' else '[No Content]'}")
-                if i.attachments:
-                    for x, e in enumerate(i.attachments, 1):
-                        print(f"Attachment {x}: {e.url}")
-                    
-                    print("\n")
-            
-            raise web.HTTPFound("/")
-
-        self.webserver_port = os.environ.get('PORT', 8080)
+        self.webserver_port = os.environ.get('PORT', 5000)
         app.add_routes(routes)
 
     @tasks.loop()
@@ -104,8 +45,5 @@ class Webserver(Cog):
     async def web_server_before_loop(self):
         await self.bot.wait_until_ready()
 
-
 def setup(bot):
     bot.add_cog(Webserver(bot))
-
-# 🐾chat-1 - 741381152543211550

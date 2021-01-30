@@ -9,7 +9,7 @@ Create a custom directory to better organize your channels.
 **New? Try these commands in your server:**
 ```
 cdr:setup
-cdrLnew_channel "root" "Front Yard"
+cdr:new_channel "root" "Front Yard"
 cdr:new_category "root" "Big House"
 cdr:new_channel "root//Big House" "Livingroom"
 ```

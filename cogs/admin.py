@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-
 # Lib
 from asyncio import sleep
 from os import popen
-from os.path import split
 from copy import deepcopy
 
 # Site

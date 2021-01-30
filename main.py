@@ -54,8 +54,7 @@ LOADING_CHOICES = [  # because why not
 
 
 config_data = PI("Serialized/bot_config.pkl", create_file=True)
-user_data = PI("Serialized/data.pkl", create_file=True)
-
+user_data = PI("Serialized/data.pkl")
 
 # Check the bot config file
 for key in CONFIG_DEFAULTS:
@@ -73,8 +72,7 @@ for key in found_data:
 
 del found_data  # Remove variable from namespace
 
-
-# Check the user data file
+# Check the database
 for key in DATA_DEFAULTS:
     if key not in user_data:
         user_data[key] = DATA_DEFAULTS[key]

@@ -1,4 +1,3 @@
-
 # Lib
 from asyncio import sleep
 from asyncio.exceptions import TimeoutError
@@ -29,11 +28,24 @@ class Events(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
+    # Automatically update the directory when a channel is deleted.
     @Cog.listener()
     async def on_guild_channel_delete(self, channel):
         if channel.guild.id not in self.bot.LoadingUpdate and channel.guild.id in self.bot.user_data["Directories"]:
             with lucm(self.bot, channel.guild.id):
-                await sleep(5)
+                def check(cchannel):
+                    return cchannel.guild == channel.guild
+                
+                # Restart the event if another channel is deleted within 5 seconds.
+                # The event could break if the user chooses to teardown the directory while waiting.
+                while True:
+                    try:
+                        await self.bot.wait_for("guild_channel_delete", timeout=5, check=check)
+                    except TimeoutError:
+                        break
+                    else:
+                        continue
+
                 catch_id = deepcopy(self.bot.user_data["Directories"][channel.guild.id]["categoryID"])
                 await self.bot.update_directory(channel,
                                                 note="Updated automatically following channel deletion by user.")
@@ -67,19 +79,9 @@ class Events(Cog):
                 user = await self.bot.fetch_user(voter)
                 try:
                     await user.send(
-                        "Thanks for voting! You will now have access to the following commands shortly for 12 hours:\n"
-                        "```\n"
-                        f"{self.bot.command_prefix}add_to_closet\n"
-                        f"{self.bot.command_prefix}remove_from_closet\n"
-                        f"{self.bot.command_prefix}rename_closet_entry\n"
-                        f"{self.bot.command_prefix}see_closet\n"
-                        f"{self.bot.command_prefix}preview_closet_entry\n"
-                        f"```\n"
-                        f"These commands allow you to store favorite vanity avatars "
-                        f"and use them anywhere. You can only hold up to 10.\n"
-                        f"For help on the usage of each command, "
-                        f"enter `{self.bot.command_prefix}help commands <command name>`.")
-
+                        "Thanks for voting!"
+                    )
+                
                 except HTTPException or Forbidden:
                     print(f"[❌] User \"{user}\" voted for \"{self.bot.user}\". DM Failed.")
                 else:
@@ -90,6 +92,12 @@ class Events(Cog):
         # Check if the message is a command. Terminates the event if so, so the command can run.
         verify_command = await self.bot.get_context(msg)
         if verify_command.valid:
+            if msg.guild.id in self.bot.user_data["Directories"]:
+                if msg.channel.id == self.bot.user_data["Directories"][msg.guild.id]["channelID"]:
+                    await sleep(2)
+                    with suppress(Exception):  # Message may already be deleted
+                        await msg.delete()
+
             self.bot.inactive = 0
             return
 
@@ -246,10 +254,15 @@ class Events(Cog):
                 except Forbidden:
                     pass
 
+    # The GUI. A massive listener. Capable of mimicking most of the commands using a reaction.
     @Cog.listener()
     async def on_reaction_add(self, reaction: Reaction, user: Member):
-        if reaction.message.guild and reaction.message.guild.id in self.bot.user_data["Directories"]:
-            if reaction.message.id == self.bot.user_data["Directories"][reaction.message.guild.id]["messageID"]:
+        if reaction.message.guild and \
+        reaction.message.guild.id in \
+        self.bot.user_data["Directories"]:
+            if reaction.message.id == self.bot.user_data["Directories"] \
+                [reaction.message.guild.id] \
+                ["messageID"]:
                 if reaction.message.guild.id in self.bot.pause_reaction_listening:
                     return
 
@@ -304,7 +317,7 @@ class Events(Cog):
                         await reaction.message.add_reaction("7️⃣")
 
                         await info.edit(
-                            content=f"**{user}**\n"
+                            content=f"**{user.mention}**\n"
                                     "```\n"
                                     "1️⃣ = Create Channel\n"
                                     "2️⃣ = Create Category\n"
@@ -1443,8 +1456,10 @@ class Events(Cog):
         channel = self.bot.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
         user = self.bot.get_user(payload.user_id)
-
         ctx = await self.bot.get_context(message)
+        
+        if ctx.guild:
+            member = payload.member
 
         if user == self.bot.user:
             return
@@ -1454,7 +1469,7 @@ class Events(Cog):
                 if str(payload.emoji) == "🔄" and payload.user_id != self.bot.user.id:
 
                     # Check permissions for the user and bot
-                    perms = user.permissions_in(ctx.channel)
+                    perms = member.permissions_in(ctx.channel)
                     if not perms.manage_channels:
                         await ctx.channel.send(
                             f"**{user}**, you require the \"Manage Channels\" permission in this channel to use this.",
@@ -1499,109 +1514,12 @@ class Events(Cog):
         if not self.bot.config["debug_mode"]:
             msg = ctx.message
             if isinstance(error, BotMissingPermissions):
-                if ctx.command.name == "setup_directory":
-                    await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, "
-                        f"`Send Messages` and `Manage Messages` permissions.\n"
-                        f"The `setup_directory` command also requires following permissions:\n"
-                        f"```\n"
-                        f"Manage Channels - To create your new channel system. "
-                        f"This will not erase any outside channels.\n"
-                        f"Add Reactions - To add buttons to make it more convenient to answer confirmation messages.\n"
-                        f"Manage Roles - To change the permissions "
-                        f"in the \"directory\" channel so only you and the server owner "
-                        f"(if you're not a higher role than me*) can edit until further permissions are set.\n"
-                        f"```"
-                        f"\\*Consult moderators if you don't have permission to use the directory channel created."
-                    )
-
-                elif ctx.command.name == "teardown_directory":
-                    await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, "
-                        f"`Send Messages` and `Manage Messages` permissions.\n"
-                        f"The `teardown_directory` command also requires following permissions:\n"
-                        f"```\n"
-                        f"Manage Channels - To delete channels under the managed category. "
-                        f"This does not delete channels outside said category UNLESS a category ID is provided.\n"
-                        f"```"
-                    )
-
-                elif ctx.command.name == "create_channel":
-                    await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, "
-                        f"`Send Messages` and `Manage Messages` permissions.\n"
-                        f"The `create_channel` command also requires following permissions:\n"
-                        f"```\n"
-                        f"Manage Channels - To create new channels using the new channel system.\n"
-                        f"```"
-                    )
-
-                elif ctx.command.name == "create_category":
-                    await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, "
-                        f"`Send Messages` and `Manage Messages` permissions.\n"
-                        f"The `create_category` command requires no additional permissions."
-                    )
-
-                elif ctx.command.name == "delete_category":
-                    await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, "
-                        f"`Send Messages` and `Manage Messages` permissions.\n"
-                        f"The `delete_category` command also requires following permissions:\n"
-                        f"```\n"
-                        f"Manage Channels - To delete channels under a V2* category.\n"
-                        f"```\n"
-                        f"\\* A V2 category is a category created by me, and is not associated with Discord. "
-                        f"It is involved with the new system."
-                    )
-
-                elif ctx.command.name == "rename_channel":
-                    await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, "
-                        f"`Send Messages` and `Manage Messages` permissions.\n"
-                        f"The `rename_channel` command also requires following permissions:\n"
-                        f"```\n"
-                        f"Manage Channels - To rename channels created with the new system.\n"
-                        f"```\n"
-                        f"This command can also rename V2\\* categories.\n"
-                        f"\\* A V2 category is a category created by me, and is not associated with Discord."
-                    )
-
-                elif ctx.command.name == "move_channel":
-                    await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, "
-                        f"`Send Messages` and `Manage Messages` permissions.\n"
-                        f"The `move_channel` command requires no additional permissions."
-                    )
-
-                elif ctx.command.name == "import_channel":
-                    await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, "
-                        f"`Send Messages` and `Manage Messages` permissions.\n"
-                        f"The `import_channel` command requires no additional permissions."
-                    )
-
-                elif ctx.command.name == "hide_channel":
-                    await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, "
-                        f"`Send Messages` and `Manage Messages` permissions.\n"
-                        f"The `hide_channel` command requires no additional permissions."
-                    )
-
-                elif ctx.command.name == "save_directory":
-                    await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, "
-                        f"`Send Messages` and `Manage Messages` permissions.\n"
-                        f"The `save_directory` command requires no additional permissions."
-                    )
-
-                elif ctx.command.name == "preview_directory":
-                    await ctx.author.send(
-                        f"Every command requires the `Read Text Channels/Messages`, "
-                        f"`Send Messages` and `Manage Messages` permissions.\n"
-                        f"The `preview_directory` command requires no additional permissions."
-                    )
-
+                with suppress(Forbidden):
+                    await ctx.message.add_reaction("❌")
+                
+                await msg.author.send(
+                    "This bot is missing one or more permissions listed in the help menu under **Required Permissions**."
+                )
                 return
 
             elif isinstance(error, NotOwner):

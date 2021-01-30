@@ -1,4 +1,3 @@
-
 # Lib
 from os import popen
 from asyncio import sleep
@@ -49,10 +48,8 @@ class BackgroundTasks(Cog):
     async def save_data(self):
         time = datetime.now().strftime("%H:%M, %m/%d/%Y")
 
-        self.bot.user_data.save()
-
         self.bot.inactive = self.bot.inactive + 1
-        print(f"[CDR: {time}] Saved data.")
+        print(f"[CDR: {time}] Running.")
 
     @status_change.before_loop
     async def sc_wait(self):

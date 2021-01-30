@@ -18,7 +18,7 @@ from discord.file import File
 from utils.classes import Bot
 from utils.directory_mgmt import recurse_index, loadingupdate as loading
 
-required_permissions_total = {
+all_permissions = {
     "manage_channels": True,
     "manage_roles": True,
     "manage_messages": True,
@@ -284,8 +284,7 @@ class Commands(Cog):
                                                                                     "Also do not delete it.")
 
                                     await directory.set_permissions(ctx.guild.default_role, send_messages=False)
-                                    member_self = await ctx.guild.fetch_member(self.bot.user.id)
-                                    await directory.set_permissions(member_self, send_messages=True)
+                                    await directory.set_permissions(ctx.guild.me, send_messages=True)
                                     await directory.set_permissions(ctx.author, send_messages=True)
 
                                     dmessage = await directory.send("Adding channels...")
@@ -1073,7 +1072,7 @@ class Commands(Cog):
                         return
 
                     try:
-                        open(f"{self.bot.cwd}/Workspace/cdr_directory.pkl", "x").close()
+                        open(f"{self.bot.cwd}/Workspace/cdr_directory_{ctx.guild.id}.pkl", "x").close()
                     except FileExistsError:
                         pass
 
@@ -1081,7 +1080,7 @@ class Commands(Cog):
                         data = await self.bot.convert_to_readable(ctx=ctx)
                         dump(data, f)
 
-                    file = File(f"{self.bot.cwd}/Workspace/cdr_directory.pkl")
+                    file = File(f"{self.bot.cwd}/Workspace/cdr_directory_{ctx.guild.id}.pkl")
                     await ctx.author.send(f"This file contains pickled data using Python.\n"
                                           f"Use the command `{self.bot.command_prefix}setup` "
                                           f"and attach the file to load it.",
@@ -1111,13 +1110,13 @@ class Commands(Cog):
         if ctx.message.attachments:
             file = None
             for i in ctx.message.attachments:
-                if i.filename == f"cdr_directory.pkl":
+                if i.filename == f"cdr_directory_{ctx.guild.id}.pkl":
                     file = i
                     break
 
             if file is None:
                 await ctx.send(
-                    "You don't have a file named \"cdr_directory.pkl\" attached.\n"
+                    "You don't have a file named \"cdr_directory_YOUR-SERVER-ID.pkl\" attached.\n"
                     "Also make sure that it is a valid Python Pickle file. These are encoded in pure bytes.")
                 return
         else:

@@ -176,7 +176,7 @@ class Bot(DiscordBot):
         self.cwd = getcwd()
 
         self.config = PI("Serialized/bot_config.pkl", create_file=True)
-        self.user_data = PI("Serialized/data.pkl", create_file=True)
+        self.user_data = PI("Serialized/data.pkl")
 
         # Attribute for accessing tokens from file
         self.auth = PI(f"{self.cwd}/Serialized/tokens.pkl")
@@ -187,6 +187,7 @@ class Bot(DiscordBot):
         super().__init__(*args, **kwargs)
 
     def run(self, *args, **kwargs):
+        print("[BOT INIT] Logging in with token.")
         super().run(self.auth["MWS_BOT_TOKEN"], *args, **kwargs)
 
     def connect_dbl(self, autopost: bool = True):
